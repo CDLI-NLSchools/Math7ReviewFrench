@@ -646,6 +646,28 @@ function E(id,unit,indicators,level,kind,gen,hints){var e={id:id,unit:unit,indic
    defined here for the entries that use it. CR_MARKS stays at the end of this file. */
 function FR(n,d){return "\\frac{"+n+"}{"+d+"}";}
 
+function precPair(keyT, ds){
+  function parse(s){ var t=String(s); var suf=""; if(t.slice(-2)===" $"){suf=" $";t=t.slice(0,-2);} else if(t.slice(-2)===" %"){suf=" %";t=t.slice(0,-2);} else if(t.slice(-1)==="%"){suf="%";t=t.slice(0,-1);} var m=t.match(/^(-?[\d\u00A0\u202F ]+?)(?:,(\d+))?$/); if(!m) return null; return {intp:m[1], frac:m[2]||"", suf:suf, dp:(m[2]||"").length}; }
+  var k=parse(keyT); if(!k) return ds;
+  var ps=ds.map(function(o){ return parse(o.t); });
+  if(ps.some(function(p){ return !p; })) return ds;
+  var M=k.dp; ps.forEach(function(p){ if(p.dp>M) M=p.dp; });
+  function render(p,target){
+    var core;
+    if(target===0) core=p.intp;
+    else if(p.dp>=target) core=p.intp+","+(p.frac||"");
+    else if(p.dp===0) core=p.intp+","+("000000".slice(0,target));
+    else core=p.intp+","+p.frac+("000000".slice(0,target-p.dp));
+    return core+p.suf;
+  }
+  var targets=new Array(ps.length), found=null;
+  function countsOk(arr){ var c={}, i; c[k.dp]=1; for(i=0;i<arr.length;i++) c[arr[i]]=(c[arr[i]]||0)+1; for(var v in c){ if(c[v]===1) return false; } return true; }
+  function search(i){ if(found) return; if(i===ps.length){ if(countsOk(targets)) found=targets.slice(); return; } for(var t=ps[i].dp;t<=M;t++){ targets[i]=t; search(i+1); if(found) return; } }
+  search(0);
+  if(!found) return ds;
+  return ds.map(function(o,i){ var nt=render(ps[i],found[i]); if(nt===o.t) return o; var n2={}; for(var kk in o) n2[kk]=o[kk]; n2.t=nt; return n2; });
+}
+
 /* ===== Unit 1 ===== */
 /* TRANSLATOR NOTES
    Chunk: Math 7, Unit 1 (Les régularités et les relations), 25 entries
@@ -740,9 +762,9 @@ E("u1-divisibility-why", 1, ["5.1"], 2, "gen", function(){
   if(!n)n=(d===3?417:648);
   var S=u1DigitSum(n), last=n%10, last2=n%100;
   var opts=[
-    {t:"Son dernier chiffre, "+last+", est divisible par "+d+".", fb:"Le dernier chiffre est le test pour 2, 5 et 10, pas pour "+d+"."},
+    {t:"Son dernier chiffre, "+last+", est lui-même divisible par "+d+".", fb:"Le dernier chiffre est le test pour 2, 5 et 10, pas pour "+d+"."},
     {t:"Ses deux derniers chiffres forment "+last2+", qui est divisible par "+d+".", fb:"Le test des deux derniers chiffres est pour 4. Pour "+d+", utilise la somme des chiffres."},
-    {t:"Il se termine par 0 ou 5.", fb:"Se terminer par 0 ou 5 est le test pour 5 (et en partie pour 10), pas pour "+d+"."}];
+    {t:"Il se termine par 0 ou 5, ce qui est le test pour 5.", fb:"Se terminer par 0 ou 5 est le test pour 5 (et en partie pour 10), pas pour "+d+"."}];
   return mcq("Pourquoi \\("+n+"\\) est-il divisible par \\("+d+"\\) ?",
     {t:"La somme de ses chiffres donne "+S+", et "+S+" est divisible par "+d+".", fb:"Exact : le test de la somme des chiffres décide de la divisibilité par "+d+"."}, opts,
     "Additionne les chiffres de \\("+n+"\\) : la somme des chiffres est \\("+S+"\\), et \\("+S+" \\div "+d+" = "+(S/d)+"\\). Une somme des chiffres divisible par \\("+d+"\\) signifie que le nombre est divisible par \\("+d+"\\). La réponse est <b>la somme des chiffres, "+S+", est divisible par "+d+"</b>.",
@@ -788,27 +810,27 @@ E("u1-carroll-cell", 1, ["5.2","5.1"], 2, "gen", function(){
 E("u1-divide-by-zero", 1, ["5.3"], 2, "var", varset([
   function(){ return mcq("Pourquoi ne peut-on pas donner une réponse à \\(12 \\div 0\\) ?",
     {t:"Il n'y a aucun nombre qui, multiplié par 0, donne 12.", fb:"Exact : on vérifie une division par une multiplication, et tout nombre fois 0 donne 0."},
-    [{t:"La réponse est 0.", fb:"Si 12 divisé par 0 donnait 0, alors 0 fois 0 devrait égaler 12, et ce n'est pas le cas."},
-     {t:"La réponse est 12.", fb:"Si c'était 12, alors 12 fois 0 devrait égaler 12, mais cela donne 0."},
-     {t:"N'importe quel nombre peut être la réponse.", fb:"Un quotient doit se vérifier par multiplication; aucun nombre fois 0 ne donne 12."}],
+    [{t:"La réponse est 0, parce que zéro groupe ne partage rien.", fb:"Si 12 divisé par 0 donnait 0, alors 0 fois 0 devrait égaler 12, et ce n'est pas le cas."},
+     {t:"La réponse est 12, le même nombre que celui du départ.", fb:"Si c'était 12, alors 12 fois 0 devrait égaler 12, mais cela donne 0."},
+     {t:"N'importe quel nombre peut être la réponse ici.", fb:"Un quotient doit se vérifier par multiplication; aucun nombre fois 0 ne donne 12."}],
     "La division défait la multiplication. Pour que \\(12 \\div 0\\) ait une réponse \\(q\\), il faudrait \\(q \\times 0 = 12\\), mais tout nombre fois 0 donne 0. La réponse est <b>un tel nombre n'existe pas</b>.", {}); },
   function(){ return mcq("Dix biscuits doivent être partagés également en groupes, mais la taille du groupe est 0. Pourquoi \\(10 \\div 0\\) échoue-t-il ?",
     {t:"On ne peut pas partager en 0 groupe, donc la division n'a pas de réponse.", fb:"Exact : un diviseur de 0 demande des groupes de rien, qui ne peuvent rien partager."},
-    [{t:"Chaque groupe reçoit 10 biscuits.", fb:"Cela décrirait un seul groupe de 10, un diviseur de 1, pas de 0."},
+    [{t:"Chaque groupe reçoit 10 biscuits, comme s'il n'y avait qu'un groupe.", fb:"Cela décrirait un seul groupe de 10, un diviseur de 1, pas de 0."},
      {t:"Chaque groupe reçoit 0 biscuit et le partage est terminé.", fb:"Des groupes de 0 n'utilisent jamais les 10 biscuits, donc le partage ne se termine jamais."},
-     {t:"La réponse est 10 parce que rien ne change.", fb:"Diviser par 0, ce n'est pas ne rien faire; cela n'a pas de réponse."}],
+     {t:"La réponse est 10 parce que rien ne change quand la taille du groupe est 0.", fb:"Diviser par 0, ce n'est pas ne rien faire; cela n'a pas de réponse."}],
     "Diviser par 0 signifie faire des groupes de taille 0. Des groupes de 0 n'utilisent jamais les 10 biscuits, donc le processus ne peut pas se terminer. La réponse est <b>la division par 0 n'a pas de réponse</b>.", {}); },
   function(){ return mcq("Quel énoncé explique pourquoi \\(7 \\div 0\\) est impossible ?",
     {t:"Un quotient q devrait vérifier q fois 0 égale 7, et cela n'arrive jamais.", fb:"Exact : cette vérification par multiplication est exactement la définition de la division."},
-    [{t:"Sept est un nombre impair.", fb:"Les nombres impairs se divisent très bien par beaucoup de diviseurs; l'imparité n'est pas le problème."},
-     {t:"Zéro est plus petit que sept.", fb:"Les petits diviseurs fonctionnent : 7 divisé par 1 ou par 7 fonctionne."},
-     {t:"La réponse serait un très grand nombre.", fb:"Aucun nombre, grand ou petit, multiplié par 0 ne donne 7."}],
+    [{t:"Sept est un nombre impair, et les nombres impairs ne se divisent pas.", fb:"Les nombres impairs se divisent très bien par beaucoup de diviseurs; l'imparité n'est pas le problème."},
+     {t:"Zéro est plus petit que sept, donc il ne peut pas servir à diviser sept.", fb:"Les petits diviseurs fonctionnent : 7 divisé par 1 ou par 7 fonctionne."},
+     {t:"La réponse serait un très grand nombre, trop grand pour être écrit ici.", fb:"Aucun nombre, grand ou petit, multiplié par 0 ne donne 7."}],
     "Vérifie par multiplication : \\(7 \\div 0 = q\\) signifierait \\(q \\times 0 = 7\\). Comme \\(q \\times 0 = 0\\) pour tout \\(q\\), c'est impossible. La réponse est <b>la vérification par multiplication ne peut jamais fonctionner</b>.", {}); },
   function(){ return mcq("Un élève écrit \\(9 \\div 0 = 0\\). Pourquoi l'élève a-t-il tort ?",
     {t:"Si le quotient était 0, alors 0 fois 0 devrait égaler 9.", fb:"Exact : la vérification par multiplication échoue, donc 0 ne peut pas être le quotient."},
-    [{t:"Le quotient devrait être 9.", fb:"Alors 9 fois 0 devrait égaler 9, mais cela donne 0."},
-     {t:"Neuf ne peut pas être divisé par de petits nombres.", fb:"Neuf se divise par 1, 3 et 9 sans problème; 0 est le diviseur spécial."},
-     {t:"Zéro ne peut jamais apparaître dans un calcul.", fb:"Zéro fonctionne comme dividende : 0 divisé par 9 donne 0. Il échoue comme diviseur."}],
+    [{t:"Le quotient devrait être 9, le nombre qu'on a divisé au départ.", fb:"Alors 9 fois 0 devrait égaler 9, mais cela donne 0."},
+     {t:"Neuf ne peut pas être divisé par de petits nombres ici.", fb:"Neuf se divise par 1, 3 et 9 sans problème; 0 est le diviseur spécial."},
+     {t:"Zéro ne peut jamais apparaître dans un calcul, d'aucune sorte.", fb:"Zéro fonctionne comme dividende : 0 divisé par 9 donne 0. Il échoue comme diviseur."}],
     "Teste l'affirmation par multiplication : \\(0 \\times 0 = 0\\), pas 9, donc 0 n'est pas le quotient de \\(9 \\div 0\\), et aucun autre nombre ne fonctionne non plus. La réponse est <b>l'affirmation échoue à la vérification par multiplication</b>.", {}); },
   function(){ return mcq("Laquelle de ces divisions peut être effectuée ?",
     {t:"0 divisé par 6", fb:"Exact : 0 partagé en 6 groupes donne 0 dans chaque groupe, et 6 fois 0 redonne 0."},
@@ -840,33 +862,33 @@ E("u1-factor-list", 1, ["5.4"], 1, "gen", function(){
 E("u1-variable-meaning", 1, ["8.4"], 1, "var", varset([
   function(){ return mcq("Les billets coûtent 9 $ chacun. Le coût total s'écrit \\(9t\\), où \\(t\\) est le nombre de billets. Qu'est-ce que \\(t\\) ?",
     {t:"Une variable : une valeur qui peut changer d'un achat à l'autre.", fb:"Exact : la lettre représente une quantité qui n'est pas fixe."},
-    [{t:"Le signe de multiplication.", fb:"La multiplication est sous-entendue quand on écrit 9 à côté de t; t lui-même représente le nombre de billets."},
-     {t:"Une valeur fixe de 9.", fb:"Neuf est le prix d'un billet; t est la partie qui change."},
-     {t:"Le coût total.", fb:"Le coût total est l'expression entière 9t; t est le nombre de billets."}],
+    [{t:"Le signe de multiplication qui joint le 9 et le t dans l'expression.", fb:"La multiplication est sous-entendue quand on écrit 9 à côté de t; t lui-même représente le nombre de billets."},
+     {t:"Une valeur fixe de 9 qui reste la même pour chaque achat de billets.", fb:"Neuf est le prix d'un billet; t est la partie qui change."},
+     {t:"Le coût total de tous les billets achetés dans l'achat entier.", fb:"Le coût total est l'expression entière 9t; t est le nombre de billets."}],
     "Dans \\(9t\\), la lettre \\(t\\) représente le nombre de billets, qui change à chaque achat. Une lettre utilisée ainsi est une variable. La réponse est <b>une variable, une valeur qui peut changer</b>.", {}); },
   function(){ return mcq("Dans la formule du périmètre d'un carré, \\(P = 4s\\), que représente la variable \\(s\\) ?",
     {t:"La longueur du côté du carré, qui peut être n'importe quelle valeur.", fb:"Exact : s change selon la taille du carré."},
-    [{t:"Le nombre 4.", fb:"Quatre est le nombre de côtés égaux; s est la longueur du côté."},
-     {t:"Le périmètre lui-même.", fb:"Le périmètre est P; s est la longueur du côté utilisée pour le trouver."},
-     {t:"Une unité comme les centimètres.", fb:"Les unités s'écrivent après une mesure; s représente la valeur de la longueur."}],
+    [{t:"Le nombre 4, qui compte les côtés du carré dans la formule du périmètre.", fb:"Quatre est le nombre de côtés égaux; s est la longueur du côté."},
+     {t:"Le périmètre lui-même, la distance tout autour du carré entier.", fb:"Le périmètre est P; s est la longueur du côté utilisée pour le trouver."},
+     {t:"Une unité comme les centimètres pour mesurer une longueur quelconque.", fb:"Les unités s'écrivent après une mesure; s représente la valeur de la longueur."}],
     "\\(P = 4s\\) multiplie la longueur du côté par 4. La lettre \\(s\\) peut être n'importe quelle longueur de côté, donc c'est la variable. La réponse est <b>la longueur du côté, qui peut être n'importe quelle valeur</b>.", {}); },
   function(){ return mcq("Une classe écrit l'expression \\(20 - 2m\\) pour l'argent qui reste après l'achat de \\(m\\) muffins à 2 $ chacun avec 20 $. Que fait \\(m\\) dans cette expression ?",
     {t:"Il tient la place du nombre de muffins, qui n'est pas encore fixé.", fb:"Exact : m peut être 1, 2, 3 et ainsi de suite, et l'argent qui reste change avec lui."},
     [{t:"Il nous dit de soustraire 2 exactement m fois, comme un signe d'opération.", fb:"La partie 2m est une multiplication; m lui-même est le nombre de muffins."},
-     {t:"C'est une étiquette pour les muffins, comme une unité.", fb:"Ici, m est un nombre qui peut varier, pas une étiquette d'unité."},
-     {t:"Il doit égaler 20.", fb:"Vingt est le montant d'argent de départ; m est le nombre inconnu."}],
+     {t:"C'est une étiquette pour les muffins, comme une unité de mesure.", fb:"Ici, m est un nombre qui peut varier, pas une étiquette d'unité."},
+     {t:"Il doit égaler 20, le montant d'argent avec lequel la classe a commencé.", fb:"Vingt est le montant d'argent de départ; m est le nombre inconnu."}],
     "La valeur de \\(20 - 2m\\) change quand le nombre de muffins change, donc \\(m\\) est une variable qui tient la place de ce nombre. La réponse est <b>il tient la place d'une valeur qui peut changer</b>.", {}); },
   function(){ return mcq("Quel énoncé sur une variable est exact ?",
     {t:"Une variable est une lettre ou un symbole qui représente une valeur qui peut changer ou qui est inconnue.", fb:"Exact : c'est exactement ce que fait une variable dans une expression."},
-    [{t:"Une variable représente toujours le nombre 1.", fb:"Une variable peut représenter beaucoup de valeurs différentes, pas seulement 1."},
-     {t:"Une variable est un autre nom pour un signe égal.", fb:"Le signe égal joint les deux côtés d'une équation; une variable est une lettre ou un symbole."},
-     {t:"Une variable doit être la lettre x.", fb:"N'importe quelle lettre peut être utilisée, comme n, t ou s, selon le contexte."}],
+    [{t:"Une variable représente toujours le nombre 1, quelle que soit l'expression où elle apparaît, sans exception.", fb:"Une variable peut représenter beaucoup de valeurs différentes, pas seulement 1."},
+     {t:"Une variable est un autre nom pour un signe égal, le symbole qui joint les deux côtés d'une équation.", fb:"Le signe égal joint les deux côtés d'une équation; une variable est une lettre ou un symbole."},
+     {t:"Une variable doit être la lettre x, et aucune autre lettre ne peut jamais en tenir lieu dans une expression.", fb:"N'importe quelle lettre peut être utilisée, comme n, t ou s, selon le contexte."}],
     "Une variable est une lettre ou un symbole qui tient la place d'une valeur qui peut changer ou que l'on ne connaît pas encore. La réponse est <b>une lettre ou un symbole pour une valeur qui peut changer ou qui est inconnue</b>.", {}); },
   function(){ return mcq("Dans \\(7 - 2t\\), le temps passé aux devoirs en heures est \\(t\\). Si \\(t\\) augmente, qu'arrive-t-il à la valeur de l'expression ?",
     {t:"Elle diminue, parce qu'un plus grand t rend la partie soustraite plus grande.", fb:"Exact : 2t augmente avec t, et on le soustrait de 7."},
-    [{t:"Elle reste à 7.", fb:"Sept n'est que la valeur de départ; la partie soustraite change avec t."},
-     {t:"Elle augmente, parce que t devient plus grand.", fb:"Un plus grand t rend 2t plus grand, mais cette partie est soustraite, donc la valeur diminue."},
-     {t:"Elle ne peut pas changer, parce que t n'est qu'une lettre.", fb:"Une variable change de valeur; c'est son rôle."}],
+    [{t:"Elle reste à 7, parce que le nombre de départ de l'expression ne change jamais.", fb:"Sept n'est que la valeur de départ; la partie soustraite change avec t."},
+     {t:"Elle augmente, parce que t devient de plus en plus grand avec le temps.", fb:"Un plus grand t rend 2t plus grand, mais cette partie est soustraite, donc la valeur diminue."},
+     {t:"Elle ne peut pas changer, parce que t n'est qu'une lettre dans l'expression.", fb:"Une variable change de valeur; c'est son rôle."}],
     "Quand \\(t\\) augmente, \\(2t\\) augmente, et soustraire un plus grand montant de 7 donne un plus petit résultat. La réponse est <b>elle diminue</b>.", {}); }
 ]), ["Une variable tient la place d'une valeur qui n'est pas fixe.", "Commence par te demander quelle partie de l'expression peut changer d'un cas à l'autre."]);
 
@@ -913,21 +935,21 @@ E("u1-expression-or-equation", 1, ["8.6"], 2, "var", varset([
     "Une équation affirme que deux expressions sont égales, donc elle doit contenir un signe égal. Seul \\(5n + 3 = 18\\) en a un. La réponse est <b>5n + 3 = 18</b>.", {}); },
   function(){ return mcq("En quoi une expression et une équation se ressemblent-elles et diffèrent-elles ?",
     {t:"Les deux peuvent contenir des nombres, des opérations et des variables, mais seule une équation a un signe égal.", fb:"Exact : le signe égal est la différence clé."},
-    [{t:"C'est la même chose avec des noms différents.", fb:"Une équation affirme que deux côtés sont égaux; une expression ne le fait pas."},
-     {t:"Une expression a des variables et une équation n'en a jamais.", fb:"Les équations contiennent souvent des variables, comme 2x + 5 = 17."},
-     {t:"Une équation peut être évaluée et une expression peut seulement être résolue.", fb:"C'est le contraire : on évalue les expressions, on résout les équations."}],
+    [{t:"C'est la même chose avec des noms différents, car les deux sont formés exactement des mêmes sortes d'éléments.", fb:"Une équation affirme que deux côtés sont égaux; une expression ne le fait pas."},
+     {t:"Une expression a des variables et une équation n'en a jamais, dans aucun cas.", fb:"Les équations contiennent souvent des variables, comme 2x + 5 = 17."},
+     {t:"Une équation peut être évaluée et une expression peut seulement être résolue dans une question comme celle-ci, quand elle est posée.", fb:"C'est le contraire : on évalue les expressions, on résout les équations."}],
     "Les expressions et les équations sont construites avec les mêmes parties. L'équation ajoute un signe égal qui affirme que les deux côtés correspondent. La réponse est <b>les mêmes parties, mais seule l'équation a un signe égal</b>.", {}); },
   function(){ return mcq("Un élève dit que \\(4x + 7 = 19\\) est une expression. Quelle est la meilleure correction ?",
     {t:"C'est une équation, parce qu'un signe égal joint deux expressions.", fb:"Exact : le signe égal en fait une équation."},
-    [{t:"L'élève a raison, parce qu'elle contient une variable.", fb:"Les variables apparaissent dans les expressions et dans les équations."},
-     {t:"C'est une équation seulement après qu'on l'a résolue.", fb:"C'est une équation telle qu'elle est écrite; la résoudre est quelque chose qu'on fait avec elle."},
-     {t:"Ce n'est ni l'un ni l'autre, parce qu'elle a deux opérations.", fb:"Le nombre d'opérations ne décide pas; le signe égal décide."}],
+    [{t:"L'élève a raison, parce qu'elle contient une variable comme celle-ci.", fb:"Les variables apparaissent dans les expressions et dans les équations."},
+     {t:"C'est une équation seulement après qu'on l'a résolue, et pas avant.", fb:"C'est une équation telle qu'elle est écrite; la résoudre est quelque chose qu'on fait avec elle."},
+     {t:"Ce n'est ni l'un ni l'autre, parce qu'elle a deux opérations en tout.", fb:"Le nombre d'opérations ne décide pas; le signe égal décide."}],
     "Le signe égal dans \\(4x + 7 = 19\\) joint \\(4x + 7\\) et \\(19\\), donc l'énoncé entier est une équation. La réponse est <b>c'est une équation à cause du signe égal</b>.", {}); },
   function(){ return mcq("Quelle tâche convient à une équation plutôt qu'à une expression ?",
     {t:"Trouve la valeur de x qui rend 2x + 5 = 17 vraie.", fb:"Exact : trouver la valeur qui rend un énoncé vrai, c'est résoudre une équation."},
-    [{t:"Calcule la valeur de 2x + 5 quand x vaut 4.", fb:"C'est évaluer une expression : une valeur pour x est déjà donnée."},
-     {t:"Écris 2x + 5 en mots.", fb:"Cela décrit une expression; il n'y a pas d'égalité à satisfaire."},
-     {t:"Ajoute 3 à 2x + 5.", fb:"Cela construit une nouvelle expression, pas une équation."}],
+    [{t:"Calcule la valeur de 2x + 5 quand x vaut 4 pour l'expression.", fb:"C'est évaluer une expression : une valeur pour x est déjà donnée."},
+     {t:"Écris 2x + 5 = 17 en mots, sous forme de phrase.", fb:"Cela décrit une expression; il n'y a pas d'égalité à satisfaire."},
+     {t:"Ajoute 3 à 2x + 5 pour former une nouvelle expression.", fb:"Cela construit une nouvelle expression, pas une équation."}],
     "Une équation demande la valeur qui rend les deux côtés égaux. Seule la première tâche fait cela. La réponse est <b>trouver la valeur de x qui rend 2x + 5 = 17 vraie</b>.", {}); },
   function(){ return mcq("Laquelle est une expression ?",
     {t:"9 - 3m", fb:"Exact : c'est une combinaison de nombres et d'une variable sans signe égal."},
@@ -1064,28 +1086,28 @@ E("u1-describe-graph", 1, ["7.12"], 2, "var", varset([
     {t:"Le coût commence à 2 $ et augmente de 4 $ pour chaque livre.", fb:"Exact : le premier point est à 2, et chaque pas vers la droite ajoute 4."},
     [{t:"Le coût commence à 4 $ et augmente de 2 $ pour chaque livre.", fb:"Cela échange les deux nombres : le graphique commence à 2, pas à 4."},
      {t:"Le coût augmente de 4 $ au total, peu importe le nombre de livres achetés.", fb:"Le coût continue d'augmenter avec chaque livre; 4 est l'augmentation par livre, pas l'augmentation totale."},
-     {t:"Chaque livre coûte 2 $ et le sac est gratuit.", fb:"À un livre, le coût est déjà 6, donc un livre coûte plus que 2."}],
+     {t:"Chaque livre coûte 2 $ et le sac est gratuit pour chaque achat.", fb:"À un livre, le coût est déjà 6, donc un livre coûte plus que 2."}],
     "Les points sont (0, 2), (1, 6), (2, 10), (3, 14) : un départ de 2 $ avec une augmentation régulière de 4 $ par livre. La réponse est <b>le coût commence à 2 $ et augmente de 4 $ pour chaque livre</b>.", {});
     q.figure=u1Plot([[0,2],[1,6],[2,10],[3,14]],3,16,"livres","coût ($)"); return q; },
   function(){ var q=mcq("Le graphique montre la hauteur d'un plant de haricot sur plusieurs semaines. Quelle phrase décrit la relation en langage de tous les jours ?",
     {t:"Le plant mesurait 5 cm au départ et pousse de 3 cm chaque semaine.", fb:"Exact : la hauteur à la semaine 0 est 5, et chaque semaine ajoute 3."},
     [{t:"Le plant mesurait 3 cm au départ et pousse de 5 cm chaque semaine.", fb:"Cela échange le départ et la croissance : à la semaine 0, la hauteur est 5."},
      {t:"Le plant pousse de 3 cm au total sur toute la période.", fb:"Trois centimètres est la croissance de chaque semaine, pas la croissance totale."},
-     {t:"Le plant rapetisse au fil des semaines.", fb:"Les points montent de gauche à droite, donc la hauteur augmente."}],
+     {t:"Le plant rapetisse au fil des semaines au lieu de grandir.", fb:"Les points montent de gauche à droite, donc la hauteur augmente."}],
     "Les points sont (0, 5), (1, 8), (2, 11), (3, 14) : une hauteur de départ de 5 cm avec 3 cm de croissance chaque semaine. La réponse est <b>le plant mesurait 5 cm au départ et pousse de 3 cm chaque semaine</b>.", {});
     q.figure=u1Plot([[0,5],[1,8],[2,11],[3,14]],3,16,"semaines","hauteur (cm)"); return q; },
   function(){ var q=mcq("Le graphique montre les économies de Mina quand elle ajoute le même montant chaque semaine. Quelle phrase décrit la relation en langage de tous les jours ?",
     {t:"Mina commence avec 20 $ et ajoute 7 $ chaque semaine.", fb:"Exact : le premier point est à 20, et l'augmentation hebdomadaire est 7."},
     [{t:"Mina commence avec 7 $ et ajoute 20 $ chaque semaine.", fb:"Cela échange le départ et le montant hebdomadaire; le premier point est à 20."},
      {t:"Mina ajoute 7 $ au total sur toutes les semaines.", fb:"Sept dollars sont ajoutés chaque semaine, pas une seule fois au total."},
-     {t:"Mina dépense 7 $ chaque semaine à partir de 20 $.", fb:"Les points montent, donc les économies augmentent au lieu de diminuer."}],
+     {t:"Mina dépense 7 $ chaque semaine à partir de ses 20 $ de départ.", fb:"Les points montent, donc les économies augmentent au lieu de diminuer."}],
     "Les points sont (0, 20), (1, 27), (2, 34), (3, 41) : un départ de 20 $ et une augmentation de 7 $ par semaine. La réponse est <b>Mina commence avec 20 $ et ajoute 7 $ chaque semaine</b>.", {});
     q.figure=u1Plot([[0,20],[1,27],[2,34],[3,41]],3,44,"semaines","économies ($)"); return q; },
   function(){ var q=mcq("Le graphique montre la distance parcourue lors d'une balade à vélo régulière. Quelle phrase décrit la relation en langage de tous les jours ?",
     {t:"Le cycliste parcourt 12 km à chaque heure de la balade.", fb:"Exact : chaque pas d'une heure ajoute 12 km."},
     [{t:"Le cycliste parcourt 12 km au total, peu importe la durée de la balade.", fb:"Douze est la distance par heure; le total continue d'augmenter."},
-     {t:"Le cycliste commence à 12 km de la maison.", fb:"Le graphique commence à 0 km; 12 est le taux horaire."},
-     {t:"Le cycliste ralentit au fil de la balade.", fb:"Les points montent par pas égaux, donc la vitesse est régulière."}],
+     {t:"Le cycliste commence la balade à 12 km de la maison.", fb:"Le graphique commence à 0 km; 12 est le taux horaire."},
+     {t:"Le cycliste ralentit peu à peu au fil de la balade.", fb:"Les points montent par pas égaux, donc la vitesse est régulière."}],
     "Les points sont (0, 0), (1, 12), (2, 24), (3, 36) : des augmentations égales de 12 km par heure. La réponse est <b>le cycliste parcourt 12 km à chaque heure</b>.", {});
     q.figure=u1Plot([[0,0],[1,12],[2,24],[3,36]],3,40,"heures","distance (km)"); return q; },
   function(){ var q=mcq("Le graphique montre le coût de billets de cinéma. Un groupe veut 5 billets. Quelle phrase utilise le graphique pour résoudre leur problème ?",
@@ -1333,9 +1355,9 @@ E("u2-opposites-zero", 2, ["6.24"], 2, "var", varset([
     "Associe chaque carreau positif à un carreau négatif : chaque paire vaut \\(1 + (-1) = 0\\), donc cinq paires donnent 0 au total. La réponse est <b>0</b>.", {}); },
   function(){ return mcq("Pourquoi \\((+6)\\) et \\((-6)\\) donnent-ils une somme de zéro ?",
     {t:"Ils sont à la même distance de 0 dans des directions opposées, donc ils s'annulent l'un l'autre.", fb:"Exact : des grandeurs égales avec des signes opposés donnent une somme de zéro."},
-    [{t:"Parce qu'ils sont tous les deux près de 0.", fb:"Six n'est pas particulièrement près de 0; ce qui compte, ce sont les grandeurs égales et les signes opposés."},
-     {t:"Parce que l'addition de deux nombres entiers donne toujours 0.", fb:"La plupart des paires ne donnent pas 0; seuls les opposés le font."},
-     {t:"Parce que le nombre négatif est ignoré dans l'addition.", fb:"Le nombre négatif compte entièrement; il annule le nombre positif."}],
+    [{t:"Parce qu'ils sont tous les deux près de 0, et que des nombres près de 0 s'annulent par paires comme celle-ci.", fb:"Six n'est pas particulièrement près de 0; ce qui compte, ce sont les grandeurs égales et les signes opposés."},
+     {t:"Parce que l'addition de deux nombres entiers donne toujours 0, quels que soient ces nombres.", fb:"La plupart des paires ne donnent pas 0; seuls les opposés le font."},
+     {t:"Parce que le nombre négatif est ignoré dans l'addition et ne compte pas dans le total.", fb:"Le nombre négatif compte entièrement; il annule le nombre positif."}],
     "Sur une droite numérique, \\(+6\\) et \\(-6\\) sont à la même distance de 0, de côtés opposés, donc leur somme est 0. La réponse est <b>ils sont opposés et s'annulent</b>.", {}); },
   function(){ return mcq("Que faut-il ajouter à \\(-8\\) pour obtenir 0 ?",
     {t:"8", fb:"Exact : l'opposé de -8 est 8, et les opposés donnent une somme de zéro."},
@@ -1694,14 +1716,14 @@ E("u3-between", 3, ["3.5","3.3"], 1, "gen", function(){
 E("u3-misplaced", 3, ["3.6","3.3"], 2, "var", varset([
   function(){ return mcq("Les nombres 0,3, \\("+FR(2,5)+"\\), 0,35, \\("+FR(3,4)+"\\) devaient être en ordre croissant. Quel nombre est mal placé ?",
     {t:"0,35", fb:"Oui : 0,35 est plus petit que 2/5 = 0,4, donc il devrait venir avant 2/5."},
-    [{t:"0,3", fb:"0,3 est la plus petite valeur, donc il vient en premier."},
+    [{t:"0,30", fb:"0,3 est la plus petite valeur, donc il vient en premier."},
      {t:"\\("+FR(2,5)+"\\)", fb:"2/5 = 0,4 vient après 0,35 et avant 0,75; ce n'est pas le nombre mal placé."},
      {t:"\\("+FR(3,4)+"\\)", fb:"3/4 = 0,75 est la plus grande valeur, donc il vient en dernier."}],
     "Sous forme décimale, les valeurs sont 0,3, 0,4, 0,35, 0,75. La valeur 0,35 descend sous celle qui la précède, donc <b>0,35</b> est le nombre mal placé.", {s:1}); },
   function(){ return mcq("Les nombres \\("+FR(1,4)+"\\), 0,3, \\("+FR(3,5)+"\\), 0,55 devaient être en ordre croissant. Quel nombre est mal placé ?",
     {t:"0,55", fb:"Oui : 0,55 est plus petit que 3/5 = 0,6, donc il devrait venir avant 3/5."},
     [{t:"\\("+FR(1,4)+"\\)", fb:"1/4 = 0,25 est la plus petite valeur, donc il vient en premier."},
-     {t:"0,3", fb:"0,3 se trouve entre 0,25 et 0,6, donc sa place est bonne."},
+     {t:"0,30", fb:"0,3 se trouve entre 0,25 et 0,6, donc sa place est bonne."},
      {t:"\\("+FR(3,5)+"\\)", fb:"3/5 = 0,6 vient avant 0,55 dans une liste correcte; l'erreur est 0,55 placé après."}],
     "Sous forme décimale, les valeurs sont 0,25, 0,3, 0,6, 0,55. La valeur 0,55 descend sous celle qui la précède, donc <b>0,55</b> est le nombre mal placé.", {s:2}); },
   function(){ return mcq("Les nombres 0,15, \\("+FR(1,5)+"\\), 0,28, \\("+FR(1,4)+"\\) devaient être en ordre croissant. Quel nombre est mal placé ?",
@@ -1724,7 +1746,7 @@ E("u3-misplaced", 3, ["3.6","3.3"], 2, "var", varset([
     "Sous forme décimale, les valeurs sont 0,62, 0,7, 0,68, 0,8. La valeur 0,68 descend sous celle qui la précède, donc <b>0,68</b> est le nombre mal placé.", {s:5}); },
   function(){ return mcq("Les nombres 0,9, \\("+FR(4,5)+"\\), 0,85, \\("+FR(1,2)+"\\) devaient être en ordre décroissant. Quel nombre est mal placé ?",
     {t:"0,85", fb:"Oui : en ordre décroissant, 0,85 devrait venir avant 4/5 = 0,8, pas après."},
-    [{t:"0,9", fb:"0,9 est la plus grande valeur, donc il vient en premier en ordre décroissant."},
+    [{t:"0,90", fb:"0,9 est la plus grande valeur, donc il vient en premier en ordre décroissant."},
      {t:"\\("+FR(4,5)+"\\)", fb:"4/5 = 0,8 vient après 0,85 dans une liste correcte; l'erreur est 0,85 placé après."},
      {t:"\\("+FR(1,2)+"\\)", fb:"1/2 = 0,5 est la plus petite valeur, donc il vient en dernier."}],
     "Sous forme décimale, les valeurs sont 0,9, 0,8, 0,85, 0,5. En ordre décroissant, chaque valeur devrait descendre, mais 0,85 remonte au-dessus de 0,8, donc <b>0,85</b> est le nombre mal placé.", {s:6}); }
@@ -1756,6 +1778,7 @@ E("u3-percent-convert", 3, ["3.7"], 1, "gen", function(){
     if(seen2[key2])continue; seen2[key2]=1;
     ds2.push({t:fmtD(pool2[j],3), fb:"Ce nombre décimal déplace le pourcentage du mauvais nombre de positions : divise par 100."});
   }
+  ds2=precPair(fmtD(cor),ds2);
   return mcq("Écris "+p+" % sous forme décimale.",
     {t:fmtD(cor), fb:"Oui : diviser "+p+" par 100 déplace la virgule décimale de deux positions vers la gauche."},
     ds2,
@@ -1775,6 +1798,7 @@ E("u3-frac-to-decimal", 3, ["3.11"], 1, "gen", function(){
     if(seen[key])continue; seen[key]=1;
     ds.push({t:fmtD(pool[i],3), fb:"Ce nombre décimal a une autre valeur : divise le numérateur par le dénominateur pour vérifier."});
   }
+  ds=precPair(fmtD(v,3),ds);
   var num=w*d+n;
   return mcq("Écris \\("+FR(num,d)+"\\) sous forme décimale.",
     {t:fmtD(v,3), fb:"Oui : "+num+" divisé par "+d+" donne ce nombre décimal."},
@@ -1932,33 +1956,33 @@ E("u3-repeating-to-fraction", 3, ["3.13"], 3, "gen", function(){
 E("u3-approx-example", 3, ["3.14","3.11"], 2, "var", varset([
   function(){ return mcq("Quel énoncé donne un exemple où un nombre décimal sert d'approximation de la valeur exacte d'une fraction ?",
     {t:"Une recette utilise 0,33 tasse pour \\("+FR(1,3)+"\\) de tasse, puisque 0,33 est proche de \\("+FR(1,3)+"\\) sans être exactement égal", fb:"Oui : 1/3 = 0,333..., donc 0,33 est une approximation arrondie."},
-    [{t:"Une recette utilise 0,25 tasse pour \\("+FR(1,4)+"\\) de tasse", fb:"0,25 vaut exactement 1/4, donc rien n'est approximé."},
-     {t:"Un ruban est coupé à 0,5 m pour \\("+FR(1,2)+"\\) de mètre", fb:"0,5 vaut exactement 1/2, donc rien n'est approximé."},
-     {t:"Un réservoir contient 0,4 L pour \\("+FR(2,5)+"\\) de litre", fb:"0,4 vaut exactement 2/5, donc rien n'est approximé."}],
+    [{t:"Une recette utilise 0,25 tasse pour \\("+FR(1,4)+"\\) de tasse de farine quand le cuisinier mesure les ingrédients pour un gâteau", fb:"0,25 vaut exactement 1/4, donc rien n'est approximé."},
+     {t:"Un ruban est coupé à 0,5 m pour \\("+FR(1,2)+"\\) de mètre de ruban pour le bord d'une courtepointe cousue à la main", fb:"0,5 vaut exactement 1/2, donc rien n'est approximé."},
+     {t:"Un réservoir contient 0,4 L pour \\("+FR(2,5)+"\\) de litre d'eau quand le réservoir est rempli jusqu'à ce repère sur le côté du réservoir", fb:"0,4 vaut exactement 2/5, donc rien n'est approximé."}],
     "Seule \\("+FR(1,3)+"\\) a un nombre décimal qui ne se termine jamais (0,333...), donc écrire 0,33 l'arrondit. Les autres sont exacts. La réponse est <b>l'énoncé de la recette utilisant 0,33</b>.", {s:1}); },
   function(){ return mcq("Quel énoncé donne un exemple où un nombre décimal sert d'approximation de la valeur exacte d'une fraction ?",
     {t:"Un rapport indique environ 0,67 de la classe pour \\("+FR(2,3)+"\\) de la classe, puisque 0,67 est proche de \\("+FR(2,3)+"\\) sans être exactement égal", fb:"Oui : 2/3 = 0,666..., donc 0,67 est une approximation arrondie."},
-    [{t:"Un rapport indique 0,75 de la classe pour \\("+FR(3,4)+"\\) de la classe", fb:"0,75 vaut exactement 3/4, donc rien n'est approximé."},
-     {t:"Un rapport indique 0,2 de la classe pour \\("+FR(1,5)+"\\) de la classe", fb:"0,2 vaut exactement 1/5, donc rien n'est approximé."},
-     {t:"Un rapport indique 0,6 de la classe pour \\("+FR(3,5)+"\\) de la classe", fb:"0,6 vaut exactement 3/5, donc rien n'est approximé."}],
+    [{t:"Un rapport indique 0,75 de la classe pour \\("+FR(3,4)+"\\) de la classe, dans un sondage sur les activités de l'heure du dîner mené en juin", fb:"0,75 vaut exactement 3/4, donc rien n'est approximé."},
+     {t:"Un rapport indique 0,2 de la classe pour \\("+FR(1,5)+"\\) de la classe, dans le sondage de toute l'année d'école sur les choix des élèves", fb:"0,2 vaut exactement 1/5, donc rien n'est approximé."},
+     {t:"Un rapport indique 0,6 de la classe pour \\("+FR(3,5)+"\\) de la classe, quand la classe a été sondée au mois de juin sur cette question-là", fb:"0,6 vaut exactement 3/5, donc rien n'est approximé."}],
     "Seule \\("+FR(2,3)+"\\) a un nombre décimal qui ne se termine jamais (0,666...), donc écrire 0,67 l'arrondit. Les autres sont exacts. La réponse est <b>l'énoncé du rapport utilisant 0,67</b>.", {s:2}); },
   function(){ return mcq("Quel énoncé donne un exemple où un nombre décimal sert d'approximation de la valeur exacte d'une fraction ?",
     {t:"Un panneau de sentier arrondit \\("+FR(1,6)+"\\) du parcours à 0,17, puisque le nombre décimal exact continue sans fin", fb:"Oui : 1/6 = 0,1666..., donc 0,17 est une approximation arrondie."},
-    [{t:"Un panneau de sentier indique \\("+FR(3,10)+"\\) du parcours comme 0,3", fb:"0,3 vaut exactement 3/10, donc rien n'est approximé."},
-     {t:"Un panneau de sentier indique \\("+FR(5,8)+"\\) du parcours comme 0,625", fb:"0,625 vaut exactement 5/8, donc rien n'est approximé."},
-     {t:"Un panneau de sentier indique \\("+FR(7,20)+"\\) du parcours comme 0,35", fb:"0,35 vaut exactement 7/20, donc rien n'est approximé."}],
+    [{t:"Un panneau de sentier indique \\("+FR(3,10)+"\\) du parcours comme 0,3 du chemin entre le début du sentier et le lac", fb:"0,3 vaut exactement 3/10, donc rien n'est approximé."},
+     {t:"Un panneau de sentier indique \\("+FR(5,8)+"\\) du parcours comme 0,625 du parcours jusqu'au belvédère au bord du lac en montagne", fb:"0,625 vaut exactement 5/8, donc rien n'est approximé."},
+     {t:"Un panneau de sentier indique \\("+FR(7,20)+"\\) du parcours comme 0,35 du chemin à partir du début du sentier boisé", fb:"0,35 vaut exactement 7/20, donc rien n'est approximé."}],
     "Seule \\("+FR(1,6)+"\\) a un nombre décimal qui ne se termine jamais (0,1666...), donc écrire 0,17 l'arrondit. Les autres sont exacts. La réponse est <b>l'énoncé du panneau utilisant 0,17</b>.", {s:3}); },
   function(){ return mcq("Quel énoncé donne un exemple où un nombre décimal sert d'approximation de la valeur exacte d'une fraction ?",
     {t:"Un bulletin météo donne \\("+FR(5,6)+"\\) de la journée comme environ 0,83, puisque le nombre décimal exact continue sans fin", fb:"Oui : 5/6 = 0,8333..., donc 0,83 est une approximation arrondie."},
-    [{t:"Un bulletin météo donne \\("+FR(1,8)+"\\) de la journée comme 0,125", fb:"0,125 vaut exactement 1/8, donc rien n'est approximé."},
-     {t:"Un bulletin météo donne \\("+FR(9,10)+"\\) de la journée comme 0,9", fb:"0,9 vaut exactement 9/10, donc rien n'est approximé."},
-     {t:"Un bulletin météo donne \\("+FR(3,20)+"\\) de la journée comme 0,15", fb:"0,15 vaut exactement 3/20, donc rien n'est approximé."}],
+    [{t:"Un bulletin météo donne \\("+FR(1,8)+"\\) de la journée comme 0,125, pour le temps passé dehors au soleil et à l'air frais", fb:"0,125 vaut exactement 1/8, donc rien n'est approximé."},
+     {t:"Un bulletin météo donne \\("+FR(9,10)+"\\) de la journée comme 0,9, pour le temps passé dehors au soleil et sous la pluie", fb:"0,9 vaut exactement 9/10, donc rien n'est approximé."},
+     {t:"Un bulletin météo donne \\("+FR(3,20)+"\\) de la journée comme 0,15, pour le temps passé dehors pendant la journée entière", fb:"0,15 vaut exactement 3/20, donc rien n'est approximé."}],
     "Seule \\("+FR(5,6)+"\\) a un nombre décimal qui ne se termine jamais (0,8333...), donc écrire 0,83 l'arrondit. Les autres sont exacts. La réponse est <b>l'énoncé météo utilisant 0,83</b>.", {s:4}); },
   function(){ return mcq("Quel énoncé donne un exemple où un nombre décimal sert d'approximation de la valeur exacte d'une fraction ?",
     {t:"Un jardinier arrose \\("+FR(1,7)+"\\) d'un parterre et le note comme environ 0,14, puisque le nombre décimal exact continue sans fin", fb:"Oui : 1/7 = 0,142857..., donc 0,14 est une approximation arrondie."},
-    [{t:"Un jardinier arrose \\("+FR(2,8)+"\\) d'un parterre et le note comme 0,25", fb:"0,25 vaut exactement 2/8 = 1/4, donc rien n'est approximé."},
-     {t:"Un jardinier arrose \\("+FR(4,10)+"\\) d'un parterre et le note comme 0,4", fb:"0,4 vaut exactement 4/10, donc rien n'est approximé."},
-     {t:"Un jardinier arrose \\("+FR(6,20)+"\\) d'un parterre et le note comme 0,3", fb:"0,3 vaut exactement 6/20, donc rien n'est approximé."}],
+    [{t:"Un jardinier arrose \\("+FR(2,8)+"\\) d'un parterre et le note comme 0,25, avec l'arrosoir, un matin sec de juillet au jardin communautaire", fb:"0,25 vaut exactement 2/8 = 1/4, donc rien n'est approximé."},
+     {t:"Un jardinier arrose \\("+FR(4,10)+"\\) d'un parterre et le note comme 0,4, avec l'arrosoir, un matin sec de printemps au jardin", fb:"0,4 vaut exactement 4/10, donc rien n'est approximé."},
+     {t:"Un jardinier arrose \\("+FR(6,20)+"\\) d'un parterre et le note comme 0,3, avec l'arrosoir, tôt le matin avant la chaleur du jour", fb:"0,3 vaut exactement 6/20, donc rien n'est approximé."}],
     "Seule \\("+FR(1,7)+"\\) a un nombre décimal qui ne se termine jamais (0,142857...), donc écrire 0,14 l'arrondit. Les autres sont exacts. La réponse est <b>l'énoncé du jardinier utilisant 0,14</b>.", {s:5}); }
 ]), ["Il y a approximation quand le nombre décimal exact ne se termine jamais, donc on utilise un nombre décimal arrondi.", "Commence par vérifier quelle fraction a un nombre décimal périodique."]);
 
@@ -2020,6 +2044,7 @@ E("u3-frontend-sum", 3, ["6.1","6.4"], 2, "gen", function(){
     if(seen[s2])continue; seen[s2]=1;
     ds.push({t:s2, fb:"La stratégie des premiers chiffres place la valeur près de "+fmtD(Math.round(val))+", donc cette place de la virgule donne la mauvaise taille."});
   }
+  ds=precPair(corStr,ds);
   var expr=isSum?(fmtD(A,1)+" + "+fmtD(B,2)+" + "+fmtD(C,3)):(fmtD(C,3)+" - "+fmtD(A,1));
   var fe=isSum?("les premiers chiffres donnent environ "+Math.floor(A)+" + 0 + "+Math.floor(C)):("les premiers chiffres donnent environ "+Math.floor(C)+" - "+Math.floor(A));
   return mcq("Les chiffres de la réponse à "+expr+" sont "+digits+". À l'aide de la stratégie des premiers chiffres, où la virgule décimale doit-elle aller ?",
@@ -2034,7 +2059,7 @@ E("u3-mult-decimals", 3, ["6.7"], 2, "gen", function(){
   if(mode===0){
     var p=ri(125,1999)/100, q=ri(12,48);
     ans=p*q;
-    prompt="Le tissu coûte "+fmtDF(p,2)+" $ le mètre. Combien coûtent "+q+" mètres ?";
+    prompt="Le tissu coûte "+fmtDF(p,2)+" $ le mètre. Combien coûtent "+q+" mètres, en dollars ?";
     work="\\[ \\begin{aligned} "+fmtDF(p,2)+" \\times "+q+" &= "+fmtD(ans,2)+" \\end{aligned} \\]";
   } else {
     var a=ri(115,999)/100, b=ri(12,35)/10;
@@ -2048,9 +2073,10 @@ E("u3-mult-decimals", 3, ["6.7"], 2, "gen", function(){
     if(!(pool[i]>0))continue;
     var k=fmtD(pool[i],3);
     if(seen[k])continue; seen[k]=1;
-    ds.push({t:(mode===0?fmtDF(pool[i],2)+" $":k), fb:"Vérifie la place de la virgule décimale : compte le nombre total de chiffres après la virgule dans les facteurs, ou estime d'abord la taille."});
+    ds.push({t:(mode===0?fmtDF(pool[i],2):k), fb:"Vérifie la place de la virgule décimale : compte le nombre total de chiffres après la virgule dans les facteurs, ou estime d'abord la taille."});
   }
-  var corT=(mode===0?fmtDF(ans,2)+" $":fmtD(ans,3));
+  var corT=(mode===0?fmtDF(ans,2):fmtD(ans,3));
+  ds=precPair(corT,ds);
   return mcq(prompt,
     {t:corT, fb:"Oui : la multiplication et la place de la virgule décimale sont toutes les deux correctes."},
     ds,
@@ -2087,6 +2113,7 @@ E("u3-frontend-prod-quot", 3, ["6.2","6.3"], 2, "gen", function(){
     if(seen[s2])continue; seen[s2]=1;
     ds.push({t:s2, fb:"La stratégie des premiers chiffres donne une autre taille : "+feText+"."});
   }
+  ds=precPair(corStr,ds);
   return mcq(prompt,
     {t:corStr, fb:"Oui : "+feText+", ce qui correspond à cette place."},
     ds,
@@ -2116,6 +2143,7 @@ E("u3-div-decimals", 3, ["6.8"], 2, "gen", function(){
     ds.push({t:(money?fmtDF(pool[i],2)+" $":k), fb:"Vérifie en multipliant ta réponse par le diviseur : tu dois retrouver la quantité de départ."});
   }
   var corT=(money?fmtDF(q,2)+" $":fmtD(q,3));
+  ds=precPair(corT,ds);
   return mcq(prompt,
     {t:corT, fb:"Oui : "+fmtD(q,3)+" fois "+fmtD(dv,1)+" redonne "+fmtD(dvd,3)+"."},
     ds,
@@ -2131,10 +2159,10 @@ E("u3-tech-multdiv", 3, ["6.9"], 3, "gen", function(){
     for(var i=0;i<pool.length&&ds.length<3;i++){
       var k=fmtDF(pool[i],2);
       if(seen[k])continue; seen[k]=1;
-      ds.push({t:k+" $", fb:"Multiplie le prix par le nombre complet d'articles : vérifie que chaque chiffre du multiplicateur à trois chiffres a été utilisé."});
+      ds.push({t:k, fb:"Multiplie le prix par le nombre complet d'articles : vérifie que chaque chiffre du multiplicateur à trois chiffres a été utilisé."});
     }
-    return mcq("Une école commande "+n+" cahiers d'exercices à "+fmtDF(p,2)+" $ chacun. En utilisant la technologie pour la multiplication à trois chiffres, quel est le coût total ?",
-      {t:fmtDF(total,2)+" $", fb:"Oui : "+n+" x "+fmtDF(p,2)+" $ = "+fmtDF(total,2)+" $."},
+    return mcq("Une école commande "+n+" cahiers d'exercices à "+fmtDF(p,2)+" $ chacun. En utilisant la technologie pour la multiplication à trois chiffres, quel est le coût total, en dollars ?",
+      {t:fmtDF(total,2), fb:"Oui : "+n+" x "+fmtDF(p,2)+" $ = "+fmtDF(total,2)+" $."},
       ds,
       "\\[ \\begin{aligned} "+n+" \\times "+fmtDF(p,2)+" &= "+fmtDF(total,2)+" \\end{aligned} \\] La réponse est <b>"+fmtDF(total,2)+" $</b>.",
       {mode:"mult", n:n, p:p});
@@ -2147,10 +2175,10 @@ E("u3-tech-multdiv", 3, ["6.9"], 3, "gen", function(){
     if(!(pool2[j]>0))continue;
     var k2=fmtDF(pool2[j],2);
     if(seen2[k2])continue; seen2[k2]=1;
-    ds2.push({t:k2+" $", fb:"Divise le total par "+nv+" et arrondis au cent le plus près : vérifie que les "+nv+" parts redonnent le total."});
+    ds2.push({t:k2, fb:"Divise le total par "+nv+" et arrondis au cent le plus près : vérifie que les "+nv+" parts redonnent le total."});
   }
-  return mcq("Un prix de "+fmtDF(T,2)+" $ est partagé également entre "+nv+" élèves. En utilisant la technologie, combien chaque élève reçoit-il, au cent le plus près ?",
-    {t:fmtDF(each,2)+" $", fb:"Oui : "+fmtDF(T,2)+" $ divisé par "+nv+" s'arrondit à "+fmtDF(each,2)+" $."},
+  return mcq("Un prix de "+fmtDF(T,2)+" $ est partagé également entre "+nv+" élèves. En utilisant la technologie, combien chaque élève reçoit-il, en dollars, au cent le plus près ?",
+    {t:fmtDF(each,2), fb:"Oui : "+fmtDF(T,2)+" $ divisé par "+nv+" s'arrondit à "+fmtDF(each,2)+" $."},
     ds2,
     "\\[ \\begin{aligned} "+fmtDF(T,2)+" \\div "+nv+" &= "+fmtD(T/nv,4)+" \\approx "+fmtDF(each,2)+" \\end{aligned} \\] La réponse est <b>"+fmtDF(each,2)+" $</b>.",
     {mode:"div", T:T, n:nv});
@@ -2181,6 +2209,7 @@ E("u3-order-ops-dec", 3, ["6.10"], 3, "gen", function(){
     if(seen[k])continue; seen[k]=1;
     ds.push({t:k, fb:i===0?"Cela calcule strictement de gauche à droite : les parenthèses d'abord, puis les multiplications et les divisions, puis les additions et les soustractions.":"Cette valeur vient d'une erreur de calcul : refais chaque opération dans l'ordre."});
   }
+  ds=precPair(fmtD(ans,3),ds);
   return mcq(prompt,
     {t:fmtD(ans,3), fb:"Oui : les parenthèses d'abord, puis la multiplication et la division, puis l'addition et la soustraction."},
     ds,
@@ -2202,6 +2231,7 @@ E("u3-percent-of", 3, ["6.11","3.7"], 2, "gen", function(){
       if(seen[k])continue; seen[k]=1;
       ds.push({t:k, fb:"Convertis d'abord le pourcentage en nombre décimal ("+p+" % = "+fmtD(p/100)+"), puis multiplie par "+N+"."});
     }
+    ds=precPair(fmtD(ans,2),ds);
     return mcq(pick(ctxs),
       {t:fmtD(ans,2), fb:"Oui : "+p+" % = "+fmtD(p/100)+", et "+fmtD(p/100)+" de "+N+" donne "+fmtD(ans,2)+"."},
       ds,
@@ -2236,10 +2266,10 @@ E("u3-tax-total", 3, ["6.12"], 3, "gen", function(){
   for(var i=0;i<pool.length&&ds.length<3;i++){
     var k=fmtDF(pool[i],2);
     if(seen[k])continue; seen[k]=1;
-    ds.push({t:k+" $", fb:i===1?"C'est la taxe seule : le total est le prix plus la taxe.":"Cela utilise le mauvais taux ou un montant de plus : la TVH à Terre-Neuve-et-Labrador est de 15 %."});
+    ds.push({t:k, fb:i===1?"C'est la taxe seule : le total est le prix plus la taxe.":"Cela utilise le mauvais taux ou un montant de plus : la TVH à Terre-Neuve-et-Labrador est de 15 %."});
   }
-  return mcq("Une veste coûte "+fmtDF(price,2)+" $ avant taxe. Avec la TVH de 15 % ajoutée, quel est le coût total, au cent le plus près ?",
-    {t:fmtDF(total,2)+" $", fb:"Oui : la taxe est de "+fmtDF(tax,2)+" $, et le prix plus la taxe donne ce total."},
+  return mcq("Une veste coûte "+fmtDF(price,2)+" $ avant taxe. Avec la TVH de 15 % ajoutée, quel est le coût total, en dollars, au cent le plus près ?",
+    {t:fmtDF(total,2), fb:"Oui : la taxe est de "+fmtDF(tax,2)+" $, et le prix plus la taxe donne ce total."},
     ds,
     "\\[ \\begin{aligned} \\text{taxe} &= 0,15 \\times "+fmtDF(price,2)+" = "+fmtDF(tax,2)+" \\\\ \\text{total} &= "+fmtDF(price,2)+" + "+fmtDF(tax,2)+" = "+fmtDF(total,2)+" \\end{aligned} \\] L'argent est arrondi au cent le plus près parce que les cents sont la plus petite unité payée. La réponse est <b>"+fmtDF(total,2)+" $</b>.",
     {price:price});
@@ -2253,7 +2283,7 @@ E("u3-reasonableness", 3, ["6.4"], 2, "gen", function(){
       {t:"Estime "+Math.round(a/10)*10+" x "+b+" = "+est+"; la réponse devrait être près de "+est+", donc "+fmtD(given,1)+" est trop petit", fb:"Oui : l'estimation révèle une virgule décimale mal placée."},
       [{t:"La réponse est raisonnable parce que "+a+" x "+b+" ne contient aucune virgule décimale", fb:"Des facteurs entiers peuvent quand même donner une réponse de la mauvaise taille : estime pour vérifier."},
        {t:"Estime "+Math.round(a/10)*10+" x "+b+" = "+est+"; puisque "+fmtD(given,1)+" est un nombre entier, il doit être correct", fb:"L'estimation dit que le produit devrait être près de "+est+", loin de la valeur donnée."},
-       {t:"Additionne "+a+" + "+b+" = "+(a+b)+" pour vérifier la multiplication", fb:"Additionner ne vérifie pas un produit : utilise une estimation par multiplication arrondie."}],
+       {t:"Additionne "+a+" + "+b+" = "+(a+b)+" pour vérifier la multiplication, avec les deux mêmes nombres", fb:"Additionner ne vérifie pas un produit : utilise une estimation par multiplication arrondie."}],
       "Estime avec des nombres arrondis : "+Math.round(a/10)*10+" x "+b+" = "+est+". Le vrai produit est "+cor+", donc "+fmtD(given,1)+" est beaucoup trop petit. La réponse est <b>le contrôle par estimation</b>.",
       {mode:"mult"});
   }
@@ -2264,16 +2294,16 @@ E("u3-reasonableness", 3, ["6.4"], 2, "gen", function(){
       {t:"Estime "+Math.round(x)+" + "+Math.round(y)+" = "+est2+"; la réponse devrait être près de "+est2+", donc "+fmtD(giv,2)+" est trop grand", fb:"Oui : arrondir chaque terme révèle l'erreur."},
       [{t:"La réponse est raisonnable parce que les chiffres des cents s'additionnent correctement", fb:"Des cents corrects ne garantissent pas la partie entière : estime la taille complète."},
        {t:"Estime "+Math.round(x)+" + "+Math.round(y)+" = "+est2+"; puisque la réponse donnée se termine par ,00, elle doit être correcte", fb:"L'estimation dit que la somme devrait être près de "+est2+", loin de la valeur donnée."},
-       {t:"Multiplie les deux nombres pour vérifier l'addition", fb:"La multiplication ne vérifie pas une addition : utilise une estimation par addition arrondie."}],
+       {t:"Multiplie les deux nombres pour vérifier l'addition, avec les deux mêmes nombres", fb:"La multiplication ne vérifie pas une addition : utilise une estimation par addition arrondie."}],
       "Estime avec des nombres arrondis : "+Math.round(x)+" + "+Math.round(y)+" = "+est2+". La somme réelle est "+fmtD(s,2)+", donc "+fmtD(giv,2)+" est trop grand. La réponse est <b>le contrôle par estimation</b>.",
       {mode:"add"});
   }
   var T=ri(120,360), n=ri(4,8), per=T/n, giv2=per*10, est3=Math.round(T/10)*10/n;
   return mcq("Ravi calcule "+T+" / "+n+" = "+fmtD(giv2,1)+". Quel contrôle montre si sa réponse est raisonnable ?",
     {t:"Estime "+Math.round(T/10)*10+" / "+n+" = "+fmtD(est3,1)+"; la réponse devrait être près de "+fmtD(est3,1)+", donc "+fmtD(giv2,1)+" est trop grand", fb:"Oui : l'estimation révèle une virgule décimale mal placée."},
-    [{t:"La réponse est raisonnable parce que "+n+" est un petit diviseur", fb:"Un petit diviseur ne garantit pas la taille : estime pour vérifier."},
+    [{t:"La réponse est raisonnable parce que "+n+" est un petit diviseur dans une question de division", fb:"Un petit diviseur ne garantit pas la taille : estime pour vérifier."},
      {t:"Estime "+Math.round(T/10)*10+" / "+n+" = "+fmtD(est3,1)+"; puisque "+fmtD(giv2,1)+" est plus grand que "+T+" divisé par 10, il doit être correct", fb:"L'estimation dit que le quotient devrait être près de "+fmtD(est3,1)+", loin de la valeur donnée."},
-     {t:"Soustrais "+n+" de "+T+" pour vérifier la division", fb:"La soustraction ne vérifie pas un quotient : utilise une estimation par division arrondie."}],
+     {t:"Soustrais "+n+" de "+T+" pour vérifier la division, au lieu d'estimer le quotient", fb:"La soustraction ne vérifie pas un quotient : utilise une estimation par division arrondie."}],
     "Estime avec des nombres arrondis : "+Math.round(T/10)*10+" / "+n+" = "+fmtD(est3,1)+". Le quotient réel est "+fmtD(per,2)+", donc "+fmtD(giv2,1)+" est trop grand. La réponse est <b>le contrôle par estimation</b>.",
     {mode:"div"});
 }, ["Une estimation rapide avec des nombres arrondis te dit la taille que la réponse devrait avoir.", "Commence par arrondir chaque nombre à une valeur facile, puis refais l'opération."]);
@@ -2432,10 +2462,10 @@ E("u4-radius-diameter", 4, ["9.11"], 1, "gen", function(){
     var candR=[r,3*r,d+2,4*r,r+1,d+10], seenR={}; seenR[d]=1; var dsR=[];
     for(var i=0;i<candR.length&&dsR.length<3;i++){
       if(seenR[candR[i]])continue; seenR[candR[i]]=1;
-      dsR.push({t:candR[i]+" cm", fb:"Le diamètre est exactement le double du rayon : multiplie "+r+" par 2."});
+      dsR.push({t:String(candR[i]), fb:"Le diamètre est exactement le double du rayon : multiplie "+r+" par 2."});
     }
-    var q=mcq("Le cercle du diagramme a un rayon de "+r+" cm. Quel est son diamètre ?",
-      {t:d+" cm", fb:"Oui : le diamètre est le double du rayon."},
+    var q=mcq("Le cercle du diagramme a un rayon de "+r+" cm. Quel est son diamètre, en centimètres ?",
+      {t:String(d), fb:"Oui : le diamètre est le double du rayon."},
       dsR,
       "Le diamètre passe par le centre et il est formé de deux rayons : \\(d = 2 \\times "+r+" = "+d+"\\) cm. La réponse est <b>"+d+" cm</b>.",
       {mode:"r", r:r});
@@ -2446,10 +2476,10 @@ E("u4-radius-diameter", 4, ["9.11"], 1, "gen", function(){
   var candD=[d2,d2-2,2*d2,r2+3,d2+4,r2-1], seenD={}; seenD[r2]=1; var dsD=[];
   for(var j=0;j<candD.length&&dsD.length<3;j++){
     if(candD[j]<=0||seenD[candD[j]])continue; seenD[candD[j]]=1;
-    dsD.push({t:candD[j]+" cm", fb:"Le rayon est exactement la moitié du diamètre : divise "+d2+" par 2."});
+    dsD.push({t:String(candD[j]), fb:"Le rayon est exactement la moitié du diamètre : divise "+d2+" par 2."});
   }
-  var q2=mcq("Le cercle du diagramme a un diamètre de "+d2+" cm. Quel est son rayon ?",
-    {t:r2+" cm", fb:"Oui : le rayon est la moitié du diamètre."},
+  var q2=mcq("Le cercle du diagramme a un diamètre de "+d2+" cm. Quel est son rayon, en centimètres ?",
+    {t:String(r2), fb:"Oui : le rayon est la moitié du diamètre."},
     dsD,
     "Le rayon est la moitié du diamètre : \\(r = "+d2+" \\div 2 = "+r2+"\\) cm. La réponse est <b>"+r2+" cm</b>.",
     {mode:"d", d:d2});
@@ -2458,17 +2488,17 @@ E("u4-radius-diameter", 4, ["9.11"], 1, "gen", function(){
 }, ["Le diamètre est formé de deux rayons placés bout à bout.", "Commence par imaginer le rayon, du centre jusqu'au bord, puis double-le ou divise-le par deux."]);
 
 E("u4-draw-circle", 4, ["9.12"], 1, "var", varset([
-  function(){ return mcq("Pour tracer un cercle de rayon 6 cm avec un compas, à quelle distance la pointe et le crayon doivent-ils être quand le compas est ouvert ?",
-    {t:"6 cm", fb:"Oui : l'ouverture du compas est le rayon."},
-    [{t:"12 cm", fb:"12 cm est le diamètre : l'ouverture du compas correspond au rayon, pas au diamètre."},
-     {t:"3 cm", fb:"C'est la moitié du rayon : règle l'ouverture égale au rayon."},
-     {t:"36 cm", fb:"Cela multiplie 6 par 6 : l'ouverture est simplement la longueur du rayon."}],
+  function(){ return mcq("Pour tracer un cercle de rayon 6 cm avec un compas, à quelle distance, en centimètres, la pointe et le crayon doivent-ils être quand le compas est ouvert ?",
+    {t:"6", fb:"Oui : l'ouverture du compas est le rayon."},
+    [{t:"12", fb:"12 cm est le diamètre : l'ouverture du compas correspond au rayon, pas au diamètre."},
+     {t:"3", fb:"C'est la moitié du rayon : règle l'ouverture égale au rayon."},
+     {t:"36", fb:"Cela multiplie 6 par 6 : l'ouverture est simplement la longueur du rayon."}],
     "Un compas trace un cercle dont le rayon est égal à l'ouverture entre la pointe et le crayon. Pour un rayon de 6 cm, ouvre-le à <b>6 cm</b>.", {s:1}); },
-  function(){ return mcq("Pour tracer un cercle de diamètre 10 cm avec un compas, à quelle distance la pointe et le crayon doivent-ils être quand le compas est ouvert ?",
-    {t:"5 cm", fb:"Oui : l'ouverture est le rayon, qui est la moitié de 10 cm."},
-    [{t:"10 cm", fb:"C'est le diamètre : l'ouverture doit être le rayon, la moitié de cela."},
-     {t:"20 cm", fb:"Cela double le diamètre : divise-le par deux pour obtenir le rayon."},
-     {t:"2 cm", fb:"Cela divise par 5 : le rayon est la moitié du diamètre, 5 cm."}],
+  function(){ return mcq("Pour tracer un cercle de diamètre 10 cm avec un compas, à quelle distance, en centimètres, la pointe et le crayon doivent-ils être quand le compas est ouvert ?",
+    {t:"5", fb:"Oui : l'ouverture est le rayon, qui est la moitié de 10 cm."},
+    [{t:"10", fb:"C'est le diamètre : l'ouverture doit être le rayon, la moitié de cela."},
+     {t:"20", fb:"Cela double le diamètre : divise-le par deux pour obtenir le rayon."},
+     {t:"2", fb:"Cela divise par 5 : le rayon est la moitié du diamètre, 5 cm."}],
     "L'ouverture du compas est le rayon. Rayon = 10 / 2 = 5 cm, donc ouvre-le à <b>5 cm</b>.", {s:2}); },
   function(){ return mcq("Quelle méthode peut tracer un cercle quand aucun compas n'est disponible ?",
     {t:"Tracer le contour d'une tasse ronde et marquer son centre", fb:"Oui : un objet rond donne une vraie forme de cercle à tracer."},
@@ -2476,17 +2506,17 @@ E("u4-draw-circle", 4, ["9.12"], 1, "var", varset([
      {t:"Utiliser une règle pour tracer quatre côtés droits", fb:"Des côtés droits forment un quadrilatère, pas un cercle."},
      {t:"Rouler une pièce de monnaie une fois le long d'une règle", fb:"Rouler trace un trajet droit, pas un cercle."}],
     "Tracer le contour d'un objet rond donne une courbe fermée à une distance fixe de son centre, ce qui est un cercle. La réponse est <b>tracer le contour d'une tasse ronde</b>.", {s:3}); },
-  function(){ return mcq("Un élève trace un cercle avec un compas ouvert à 4 cm. Quel est le diamètre du cercle tracé ?",
-    {t:"8 cm", fb:"Oui : l'ouverture est le rayon, 4 cm, donc le diamètre est le double."},
-    [{t:"4 cm", fb:"C'est le rayon (l'ouverture du compas) : double-le pour le diamètre."},
-     {t:"2 cm", fb:"Cela divise le rayon par deux : le diamètre est le double du rayon."},
-     {t:"16 cm", fb:"Cela met le rayon au carré : le diamètre est deux rayons, 8 cm."}],
+  function(){ return mcq("Un élève trace un cercle avec un compas ouvert à 4 cm. Quel est le diamètre du cercle tracé, en centimètres ?",
+    {t:"8", fb:"Oui : l'ouverture est le rayon, 4 cm, donc le diamètre est le double."},
+    [{t:"4", fb:"C'est le rayon (l'ouverture du compas) : double-le pour le diamètre."},
+     {t:"2", fb:"Cela divise le rayon par deux : le diamètre est le double du rayon."},
+     {t:"16", fb:"Cela met le rayon au carré : le diamètre est deux rayons, 8 cm."}],
     "L'ouverture du compas est le rayon, 4 cm. Diamètre = 2 × 4 = <b>8 cm</b>.", {s:4}); },
-  function(){ return mcq("Pour tracer un cercle de diamètre 14 cm avec un compas, à quelle distance la pointe et le crayon doivent-ils être quand le compas est ouvert ?",
-    {t:"7 cm", fb:"Oui : l'ouverture est le rayon, la moitié de 14 cm."},
-    [{t:"14 cm", fb:"C'est le diamètre : l'ouverture doit être le rayon, la moitié de cela."},
-     {t:"28 cm", fb:"Cela double le diamètre : divise-le par deux pour obtenir le rayon."},
-     {t:"3,5 cm", fb:"C'est le quart du diamètre : le rayon est la moitié, 7 cm."}],
+  function(){ return mcq("Pour tracer un cercle de diamètre 14 cm avec un compas, à quelle distance, en centimètres, la pointe et le crayon doivent-ils être quand le compas est ouvert ?",
+    {t:"7", fb:"Oui : l'ouverture est le rayon, la moitié de 14 cm."},
+    [{t:"14,0", fb:"C'est le diamètre : l'ouverture doit être le rayon, la moitié de cela."},
+     {t:"28", fb:"Cela double le diamètre : divise-le par deux pour obtenir le rayon."},
+     {t:"3,5", fb:"C'est le quart du diamètre : le rayon est la moitié, 7 cm."}],
     "L'ouverture du compas est le rayon. Rayon = 14 / 2 = 7 cm, donc ouvre-le à <b>7 cm</b>.", {s:5}); }
 ]), ["L'ouverture du compas est toujours le rayon du cercle qu'il trace.", "Commence par trouver le rayon du cercle que tu veux tracer."]);
 
@@ -2520,8 +2550,8 @@ E("u4-pi-ratio", 4, ["9.8"], 2, "gen", function(){
     return mcq("Un cercle a une circonférence de "+fmtD(C,2)+" cm et un diamètre de "+d+" cm. Quelle est la valeur de la circonférence divisée par le diamètre pour ce cercle ?",
       {t:"3,14", fb:"Oui : pour chaque cercle, C/d est la constante pi, environ 3,14."},
       [{t:"0,32", fb:"C'est environ d/C, la division dans l'autre sens."},
-       {t:"31,4", fb:"C'est dix fois trop grand : pi est un peu plus que 3."},
-       {t:fmtD(C-d,2), fb:"Cela soustrait au lieu de diviser : pi est un rapport, C divisé par d."}],
+       {t:"31,40", fb:"C'est dix fois trop grand : pi est un peu plus que 3."},
+       {t:fmtDF(C-d,2), fb:"Cela soustrait au lieu de diviser : pi est un rapport, C divisé par d."}],
       "\\[ \\begin{aligned} \\pi &= "+FR("C","d")+" = "+fmtD(C,2)+" \\div "+d+" \\\\ &= 3,14 \\end{aligned} \\] La réponse est <b>3,14</b>.",
       {mode:"ratio", d:d});
   }
@@ -2551,10 +2581,10 @@ E("u4-circumference", 4, ["9.10","9.8"], 2, "gen", function(){
     for(var i=0;i<pool.length&&ds.length<3;i++){
       var k=fmtDF(pool[i],2);
       if(seen[k])continue; seen[k]=1;
-      ds.push({t:k+" cm", fb:i===2?"Cela utilise la formule de l'aire avec le rayon : la circonférence est pi fois le diamètre.":"Vérifie la formule : C = pi × d avec pi = 3,14."});
+      ds.push({t:k, fb:i===2?"Cela utilise la formule de l'aire avec le rayon : la circonférence est pi fois le diamètre.":"Vérifie la formule : C = pi × d avec pi = 3,14."});
     }
-    var q=mcq("Quelle est la circonférence du cercle dans le diagramme ? Utilise 3,14 pour pi.",
-      {t:fmtDF(C,2)+" cm", fb:"Oui : C = 3,14 × "+d+" = "+fmtDF(C,2)+" cm."},
+    var q=mcq("Quelle est la circonférence du cercle dans le diagramme, en centimètres ? Utilise 3,14 pour pi.",
+      {t:fmtDF(C,2), fb:"Oui : C = 3,14 × "+d+" = "+fmtDF(C,2)+" cm."},
       ds,
       "\\[ \\begin{aligned} C &= \\pi d \\\\ &= 3,14 \\times "+d+" \\\\ &= "+fmtDF(C,2)+" \\text{ cm} \\end{aligned} \\] La réponse est <b>"+fmtDF(C,2)+" cm</b>.",
       {mode:"d", d:d});
@@ -2567,10 +2597,10 @@ E("u4-circumference", 4, ["9.10","9.8"], 2, "gen", function(){
   for(var j=0;j<pool2.length&&ds2.length<3;j++){
     var k2=fmtDF(pool2[j],2);
     if(seen2[k2])continue; seen2[k2]=1;
-    ds2.push({t:k2+" cm", fb:j===1?"Cela utilise la formule de l'aire : la circonférence est 2 × pi × r.":"Vérifie la formule : C = 2 × pi × r avec pi = 3,14."});
+    ds2.push({t:k2, fb:j===1?"Cela utilise la formule de l'aire : la circonférence est 2 × pi × r.":"Vérifie la formule : C = 2 × pi × r avec pi = 3,14."});
   }
-  var q2=mcq("Quelle est la circonférence du cercle dans le diagramme ? Utilise 3,14 pour pi.",
-    {t:fmtDF(C2,2)+" cm", fb:"Oui : C = 2 × 3,14 × "+r+" = "+fmtDF(C2,2)+" cm."},
+  var q2=mcq("Quelle est la circonférence du cercle dans le diagramme, en centimètres ? Utilise 3,14 pour pi.",
+    {t:fmtDF(C2,2), fb:"Oui : C = 2 × 3,14 × "+r+" = "+fmtDF(C2,2)+" cm."},
     ds2,
     "\\[ \\begin{aligned} C &= 2\\pi r \\\\ &= 2 \\times 3,14 \\times "+r+" \\\\ &= "+fmtDF(C2,2)+" \\text{ cm} \\end{aligned} \\] La réponse est <b>"+fmtDF(C2,2)+" cm</b>.",
     {mode:"r", r:r});
@@ -2595,7 +2625,7 @@ E("u4-para-from-rect", 4, ["9.1"], 2, "var", varset([
     {t:"Aucune aire n'est ajoutée ni enlevée ; les mêmes morceaux forment la nouvelle forme", fb:"Oui : réorganiser les morceaux garde la même aire totale."},
     [{t:"Un rectangle a toujours la même aire que n'importe quel parallélogramme", fb:"Seul le rectangle construit avec les mêmes morceaux, avec la même base et la même hauteur, correspond."},
      {t:"La coupe rend la forme plus petite, mais le déplacement la rend plus grande", fb:"Rien n'est gagné ni perdu : les morceaux sont identiques au total."},
-     {t:"Le périmètre reste le même, donc l'aire aussi", fb:"Le périmètre peut changer quand les morceaux bougent : ce sont les morceaux eux-mêmes qui conservent l'aire."}],
+     {t:"Le périmètre reste le même quand les morceaux bougent, donc l'aire aussi reste la même", fb:"Le périmètre peut changer quand les morceaux bougent : ce sont les morceaux eux-mêmes qui conservent l'aire."}],
     "La nouvelle forme est construite avec exactement les mêmes morceaux, donc son aire est égale à l'aire du parallélogramme. La réponse est <b>aucune aire n'est ajoutée ni enlevée</b>.", {s:3}); },
   function(){ return mcq("Un parallélogramme de base 11 cm et de hauteur 6 cm est réorganisé en rectangle. Quelles sont les longueurs des côtés de ce rectangle ?",
     {t:"11 cm et 6 cm", fb:"Oui : le rectangle prend la base et la hauteur du parallélogramme comme côtés."},
@@ -2660,7 +2690,7 @@ E("u4-triangle-from", 4, ["9.4"], 2, "var", varset([
     {t:"Deux copies identiques du triangle s'assemblent pour former ce parallélogramme", fb:"Oui : le triangle est exactement l'un des deux morceaux égaux."},
     [{t:"Les triangles ont toujours la moitié de l'aire de chaque parallélogramme", fb:"La correspondance demande la même base et la même hauteur, pas n'importe quel parallélogramme."},
      {t:"Le triangle a trois côtés et le parallélogramme en a quatre", fb:"Le nombre de côtés n'est pas la raison : ce sont les deux copies qui remplissent le parallélogramme."},
-     {t:"La hauteur d'un triangle est la moitié de la hauteur d'un parallélogramme", fb:"Ils ont ici la même hauteur : c'est l'aire qui est divisée par deux."}],
+     {t:"La hauteur d'un triangle est la moitié de la hauteur d'un parallélogramme construit sur la même base", fb:"Ils ont ici la même hauteur : c'est l'aire qui est divisée par deux."}],
     "En assemblant deux triangles identiques, on construit le parallélogramme, donc un triangle est la moitié de son aire. La réponse est <b>deux copies du triangle forment le parallélogramme</b>.", {s:4}); },
   function(){ return mcq("Un parallélogramme de base 14 cm et de hauteur 5 cm est divisé en deux triangles identiques par une diagonale. Quelle est l'aire d'un triangle ?",
     {t:"35 cm²", fb:"Oui : l'aire du parallélogramme est 70 cm², et chaque triangle en est la moitié."},
@@ -2797,10 +2827,10 @@ E("u4-circle-context", 4, ["9.10"], 3, "gen", function(){
     for(var i=0;i<pool.length&&ds.length<3;i++){
       var k=fmtDF(pool[i],2);
       if(seen[k])continue; seen[k]=1;
-      ds.push({t:k+" m", fb:i===1?"Cela utilise le rayon dans la circonférence : C = pi × d, puis multiplie par le nombre de tours et convertis en mètres.":"Trouve d'abord une circonférence (pi × d), multiplie par les tours, et change les centimètres en mètres."});
+      ds.push({t:k, fb:i===1?"Cela utilise le rayon dans la circonférence : C = pi × d, puis multiplie par le nombre de tours et convertis en mètres.":"Trouve d'abord une circonférence (pi × d), multiplie par les tours, et change les centimètres en mètres."});
     }
     return mcq("Une roue de vélo a un diamètre de "+d+" cm. La roue tourne "+n+" fois pendant une sortie. En utilisant 3,14 pour pi, quelle distance le vélo parcourt-il, en mètres ?",
-      {t:fmtDF(dist,2)+" m", fb:"Oui : un tour couvre une circonférence, et le total se convertit en "+fmtDF(dist,2)+" m."},
+      {t:fmtDF(dist,2), fb:"Oui : un tour couvre une circonférence, et le total se convertit en "+fmtDF(dist,2)+" m."},
       ds,
       "\\[ \\begin{aligned} C &= 3,14 \\times "+d+" = "+fmtDF(3.14*d,2)+" \\text{ cm} \\\\ \\text{distance} &= "+fmtDF(3.14*d,2)+" \\times "+n+" = "+fmtDF(3.14*d*n,2)+" \\text{ cm} \\\\ &= "+fmtDF(dist,2)+" \\text{ m} \\end{aligned} \\] La réponse est <b>"+fmtDF(dist,2)+" m</b>.",
       {mode:"wheel", d:d, n:n});
@@ -2811,10 +2841,10 @@ E("u4-circle-context", 4, ["9.10"], 3, "gen", function(){
   for(var j=0;j<pool2.length&&ds2.length<3;j++){
     var k2=fmtDF(pool2[j],2);
     if(seen2[k2])continue; seen2[k2]=1;
-    ds2.push({t:k2+" m", fb:j===1?"C'est l'aire du jardin : la bordure suit la circonférence, et elle fait le tour deux fois.":"La bordure suit la circonférence : trouve C = 2 × pi × r, puis double-la pour deux tours."});
+    ds2.push({t:k2, fb:j===1?"C'est l'aire du jardin : la bordure suit la circonférence, et elle fait le tour deux fois.":"La bordure suit la circonférence : trouve C = 2 × pi × r, puis double-la pour deux tours."});
   }
-  return mcq("Un jardin circulaire a un rayon de "+r+" m. Une corde de bordure fait deux fois le tour du jardin. En utilisant 3,14 pour pi, quelle longueur de corde faut-il ?",
-    {t:fmtDF(rope,2)+" m", fb:"Oui : un tour mesure "+fmtDF(2*3.14*r,2)+" m, et deux tours doublent cette longueur."},
+  return mcq("Un jardin circulaire a un rayon de "+r+" m. Une corde de bordure fait deux fois le tour du jardin. En utilisant 3,14 pour pi, quelle longueur de corde faut-il, en mètres ?",
+    {t:fmtDF(rope,2), fb:"Oui : un tour mesure "+fmtDF(2*3.14*r,2)+" m, et deux tours doublent cette longueur."},
     ds2,
     "\\[ \\begin{aligned} C &= 2 \\times 3,14 \\times "+r+" = "+fmtDF(2*3.14*r,2)+" \\text{ m} \\\\ \\text{corde} &= 2 \\times "+fmtDF(2*3.14*r,2)+" = "+fmtDF(rope,2)+" \\text{ m} \\end{aligned} \\] La réponse est <b>"+fmtDF(rope,2)+" m</b>.",
     {mode:"rope", r:r});
@@ -2853,9 +2883,9 @@ E("u4-graph-attributes", 4, ["11.2"], 1, "gen", function(){
 E("u4-graph-media", 4, ["11.1"], 2, "var", varset([
   function(){ return mcq("Un diagramme circulaire d'un journal et un diagramme circulaire d'un magazine montrent les sports préférés. Pour comparer la popularité du soccer dans chaque enquête, que dois-tu comparer ?",
     {t:"Le pourcentage (ou la taille du secteur) pour le soccer dans chaque diagramme", fb:"Oui : les pourcentages se comparent équitablement même quand les enquêtes ont des tailles différentes."},
-    [{t:"Les couleurs utilisées pour le soccer dans chaque diagramme", fb:"Les couleurs sont seulement des étiquettes : elles ne portent aucune information sur la taille."},
-     {t:"Le rayon de chaque cercle", fb:"Un cercle imprimé plus grand ne veut pas dire plus de gens : compare les pourcentages."},
-     {t:"Les titres des deux diagrammes", fb:"Les titres disent le sujet, pas les tailles : compare les pourcentages du soccer."}],
+    [{t:"Les couleurs utilisées pour le soccer dans chaque diagramme et dans la légende", fb:"Les couleurs sont seulement des étiquettes : elles ne portent aucune information sur la taille."},
+     {t:"Le rayon de chaque cercle tel qu'il est imprimé sur la page du journal", fb:"Un cercle imprimé plus grand ne veut pas dire plus de gens : compare les pourcentages."},
+     {t:"Les titres des deux diagrammes en haut de chaque page du journal et du magazine", fb:"Les titres disent le sujet, pas les tailles : compare les pourcentages du soccer."}],
     "Les diagrammes circulaires présentent les parties d'un tout en pourcentages, donc la part du soccer se compare par <b>le pourcentage pour le soccer dans chaque diagramme</b>.", {s:1}); },
   function(){ return mcq("Le diagramme A a interrogé 200 élèves et le diagramme B a interrogé 50 élèves. Dans les deux diagrammes, 40 % ont choisi le hockey. Quelle affirmation est vraie ?",
     {t:"Plus d'élèves ont choisi le hockey dans le diagramme A (80) que dans le diagramme B (20)", fb:"Oui : 40 % de 200 est 80, et 40 % de 50 est 20."},
@@ -2865,20 +2895,20 @@ E("u4-graph-media", 4, ["11.1"], 2, "var", varset([
     "40 % de 200 = 80 élèves et 40 % de 50 = 20 élèves, donc <b>plus d'élèves ont choisi le hockey dans le diagramme A</b>.", {s:2}); },
   function(){ return mcq("Pourquoi les articles de nouvelles utilisent-ils souvent des diagrammes circulaires pour les résultats d'enquête ?",
     {t:"Ils montrent chaque réponse comme une partie de l'enquête entière d'un seul coup d'œil", fb:"Oui : la taille des secteurs montre clairement les parts du total."},
-    [{t:"Ils montrent comment les valeurs changent d'heure en heure", fb:"Les changements dans le temps sont le travail d'un diagramme à lignes : les diagrammes circulaires montrent les parties d'un seul tout."},
-     {t:"Ils énumèrent chaque réponse individuelle en ordre", fb:"Les diagrammes circulaires regroupent les réponses en secteurs : ils n'énumèrent pas les individus."},
-     {t:"Ils font paraître les petits pourcentages plus grands qu'ils ne sont", fb:"Un diagramme circulaire honnête garde la taille des secteurs proportionnelle aux pourcentages."}],
+    [{t:"Ils montrent comment les valeurs changent d'heure en heure au fil de la journée entière", fb:"Les changements dans le temps sont le travail d'un diagramme à lignes : les diagrammes circulaires montrent les parties d'un seul tout."},
+     {t:"Ils énumèrent chaque réponse individuelle en ordre, l'une après l'autre dans une longue liste", fb:"Les diagrammes circulaires regroupent les réponses en secteurs : ils n'énumèrent pas les individus."},
+     {t:"Ils font paraître les petits pourcentages plus grands qu'ils ne sont dans les données", fb:"Un diagramme circulaire honnête garde la taille des secteurs proportionnelle aux pourcentages."}],
     "Un diagramme circulaire transforme chaque réponse en un secteur dont la taille suit sa part du total, donc il <b>montre les parties d'un tout d'un seul coup d'œil</b>.", {s:3}); },
   function(){ return mcq("Un billet de blogue montre un diagramme circulaire sans titre, sans étiquettes et sans pourcentages. Quelle est la meilleure conclusion ?",
     {t:"On ne peut pas interpréter le diagramme de façon fiable ; les étiquettes et les valeurs manquantes sont nécessaires", fb:"Oui : un diagramme circulaire a besoin d'un titre, d'étiquettes ou d'une légende, et de valeurs pour le lire."},
-    [{t:"Le plus grand secteur doit être la réponse la plus populaire, donc le diagramme est correct", fb:"Sans étiquettes, tu ne peux pas dire ce qu'un secteur signifie, même le plus grand."},
-     {t:"Le diagramme porte sur les sports parce que la plupart des diagrammes circulaires en parlent", fb:"Deviner le sujet n'est pas interpréter : le titre manque."},
-     {t:"Chaque secteur doit valoir 25 % parce qu'il y a quatre secteurs", fb:"La taille des secteurs suit les données, elle n'est pas divisée également par défaut."}],
+    [{t:"Le plus grand secteur doit être la réponse la plus populaire, donc le diagramme est correct et peut être utilisé tel quel", fb:"Sans étiquettes, tu ne peux pas dire ce qu'un secteur signifie, même le plus grand."},
+     {t:"Le diagramme porte sur les sports parce que la plupart des diagrammes circulaires en parlent dans les journaux", fb:"Deviner le sujet n'est pas interpréter : le titre manque."},
+     {t:"Chaque secteur doit valoir 25 % parce qu'il y a quatre secteurs dans tout le diagramme tel qu'il est imprimé", fb:"La taille des secteurs suit les données, elle n'est pas divisée également par défaut."}],
     "On lit les diagrammes circulaires grâce à leur titre, leurs étiquettes et leurs pourcentages ; quand tout cela manque, <b>on ne peut pas interpréter le diagramme de façon fiable</b>.", {s:4}); },
   function(){ return mcq("Deux sites Web montrent des diagrammes circulaires de la même enquête de classe. Le site 1 indique les pourcentages sur chaque secteur ; le site 2 indique seulement des couleurs avec une légende. Quel diagramme est plus facile à comparer avec une troisième enquête, et pourquoi ?",
     {t:"Le site 1, parce que ses pourcentages peuvent se comparer directement avec les pourcentages de n'importe quelle autre enquête", fb:"Oui : les pourcentages sont le langage commun des diagrammes circulaires."},
-    [{t:"Le site 2, parce que les couleurs sont plus faciles à retenir que les nombres", fb:"Les couleurs nomment seulement les catégories : comparer des enquêtes demande les pourcentages."},
-     {t:"Ils sont aussi faciles l'un que l'autre, parce qu'ils montrent les mêmes secteurs", fb:"Lire les quantités du site 2 demande de mesurer les angles : le site 1 les indique."},
+    [{t:"Le site 2, parce que les couleurs sont plus faciles à retenir que les nombres quand on compare des enquêtes entre elles", fb:"Les couleurs nomment seulement les catégories : comparer des enquêtes demande les pourcentages."},
+     {t:"Ils sont aussi faciles l'un que l'autre, parce qu'ils montrent les mêmes secteurs et les mêmes données pour chaque catégorie du diagramme", fb:"Lire les quantités du site 2 demande de mesurer les angles : le site 1 les indique."},
      {t:"Aucun des deux, parce que des diagrammes circulaires de sites différents ne peuvent jamais se comparer", fb:"Ils peuvent se comparer : les pourcentages mettent différentes enquêtes à la même échelle."}],
     "Les pourcentages permettent de comparer directement les parts entre enquêtes, donc <b>le site 1 est plus facile à comparer</b>.", {s:5}); }
 ]), ["On lit les diagrammes circulaires dans les médias grâce à leurs titres, leurs étiquettes et leurs pourcentages.", "Commence par te demander quelles informations chaque diagramme te donne vraiment."]);
@@ -3386,9 +3416,9 @@ E("u5-reasonable", 5, ["6.23","6.22"], 3, "var", varset([
   function(){
     return mcq("Une recette demande "+u5M(3,4)+" d'une tasse de sucre. Ben mesure "+u5M(5,4)+" d'une tasse et dit que c'est exactement la bonne quantité. Quel énoncé explique le mieux la vérification ?",
       {t:"Ben en a mesuré trop : 5/4 est plus qu'une tasse entière, et 3/4 est moins qu'une tasse entière.",fb:"Oui : comparer chaque quantité au repère d'une tasse entière montre que 5/4, c'est trop."},
-      [{t:"Ben a raison : 5/4 et 3/4 ont le même dénominateur, donc ils sont égaux.",fb:"Avoir le même dénominateur ne rend pas des fractions égales. Les numérateurs 5 et 3 sont différents."},
-       {t:"Ben en a mesuré trop peu : 5/4 est plus petit que 3/4 parce que 5 est plus grand que 3.",fb:"Avec le même dénominateur, un numérateur plus grand donne une fraction plus grande, et non plus petite."},
-       {t:"Il n'y a aucun moyen de comparer les quantités sans dénominateur commun.",fb:"Les dénominateurs sont déjà les mêmes ici, et la comparaison avec une tasse entière règle la question."}],
+      [{t:"Ben a raison : 5/4 et 3/4 ont le même dénominateur, donc ils sont égaux, quels que soient les numérateurs.", fb:"Avoir le même dénominateur ne rend pas des fractions égales. Les numérateurs 5 et 3 sont différents."},
+       {t:"Ben en a mesuré trop peu : 5/4 est plus petit que 3/4 parce que 5 est plus grand que 3, selon ce raisonnement.", fb:"Avec le même dénominateur, un numérateur plus grand donne une fraction plus grande, et non plus petite."},
+       {t:"Il n'y a aucun moyen de comparer les quantités sans dénominateur commun dans cette question.", fb:"Les dénominateurs sont déjà les mêmes ici, et la comparaison avec une tasse entière règle la question."}],
       "Compare les deux quantités avec une tasse entière. "+u5M(3,4)+" est moins qu'une tasse entière, tandis que "+u5M(5,4)+" est une tasse entière plus "+u5M(1,4)+". Donc <b>Ben en a mesuré trop</b>.",
       {mode:"reasonable-3"});
   },
@@ -3541,7 +3571,7 @@ E("u6-preservation-next", 6, ["8.1","8.2"], 1, "gen", function(){
     var a=ri(2,12),b=ri(a+2,a+16);
     prompt="Pour résoudre \\("+v+" + "+a+" = "+b+"\\), quelle étape isole \\("+v+"\\) et garde l'équation en équilibre ?";
     corr={t:"Soustraire "+a+" des deux côtés.",fb:"Oui : soustraire la même quantité des deux côtés garde l'équilibre et laisse "+v+" seul de son côté."};
-    distr=[{t:"Soustraire "+a+" du côté gauche seulement.",fb:"Cela change un seul côté, alors les deux côtés ne seraient plus égaux."},
+    distr=[{t:"Soustraire "+a+" à gauche seulement.",fb:"Cela change un seul côté, alors les deux côtés ne seraient plus égaux."},
            {t:"Additionner "+a+" aux deux côtés.",fb:"Cela garde l'équilibre, mais on s'éloigne d'isoler "+v+" : le côté gauche deviendrait "+v+" + "+(2*a)+"."},
            {t:"Soustraire "+b+" des deux côtés.",fb:"Cela garde l'équilibre, mais cela n'enlève pas le "+a+" ajouté à "+v+"."}];
     sol="Préservation de l'égalité : ce qu'on fait à un côté doit être fait à l'autre. Le "+a+" ajouté à "+v+" se défait en soustrayant "+a+", et il faut le faire des deux côtés.\\[ \\begin{aligned} "+v+" + "+a+" - "+a+" &= "+b+" - "+a+" \\\\ "+v+" &= "+(b-a)+" \\end{aligned} \\] L'étape est <b>soustraire "+a+" des deux côtés</b>.";
@@ -3549,7 +3579,7 @@ E("u6-preservation-next", 6, ["8.1","8.2"], 1, "gen", function(){
     var a2=ri(2,12),b2=ri(2,16);if(b2===a2)b2=a2+3;
     prompt="Pour résoudre \\("+v+" - "+a2+" = "+b2+"\\), quelle étape isole \\("+v+"\\) et garde l'équation en équilibre ?";
     corr={t:"Additionner "+a2+" aux deux côtés.",fb:"Oui : additionner la même quantité aux deux côtés garde l'équilibre et laisse "+v+" seul de son côté."};
-    distr=[{t:"Additionner "+a2+" au côté droit seulement.",fb:"Cela change un seul côté, alors les deux côtés ne seraient plus égaux."},
+    distr=[{t:"Additionner "+a2+" à droite seulement.",fb:"Cela change un seul côté, alors les deux côtés ne seraient plus égaux."},
            {t:"Soustraire "+a2+" des deux côtés.",fb:"Cela garde l'équilibre, mais on s'éloigne d'isoler "+v+" : le côté gauche deviendrait "+v+" - "+(2*a2)+"."},
            {t:"Additionner "+b2+" aux deux côtés.",fb:"Cela garde l'équilibre, mais cela n'enlève pas le "+a2+" soustrait de "+v+"."}];
     sol="Préservation de l'égalité : ce qu'on fait à un côté doit être fait à l'autre. Le "+a2+" soustrait de "+v+" se défait en additionnant "+a2+", et il faut le faire des deux côtés.\\[ \\begin{aligned} "+v+" - "+a2+" + "+a2+" &= "+b2+" + "+a2+" \\\\ "+v+" &= "+(b2+a2)+" \\end{aligned} \\] L'étape est <b>additionner "+a2+" aux deux côtés</b>.";
@@ -3557,7 +3587,7 @@ E("u6-preservation-next", 6, ["8.1","8.2"], 1, "gen", function(){
     var a3=ri(2,9),x3=ri(2,12),b3=a3*x3;
     prompt="Pour résoudre \\("+a3+v+" = "+b3+"\\), quelle étape isole \\("+v+"\\) et garde l'équation en équilibre ?";
     corr={t:"Diviser les deux côtés par "+a3+".",fb:"Oui : diviser les deux côtés par le même nombre garde l'équilibre et laisse "+v+" seul de son côté."};
-    distr=[{t:"Diviser le côté gauche par "+a3+" seulement.",fb:"Cela change un seul côté, alors les deux côtés ne seraient plus égaux."},
+    distr=[{t:"Diviser à gauche par "+a3+" seulement.",fb:"Cela change un seul côté, alors les deux côtés ne seraient plus égaux."},
            {t:"Multiplier les deux côtés par "+a3+".",fb:"Cela garde l'équilibre, mais on s'éloigne d'isoler "+v+" : le côté gauche deviendrait "+(a3*a3)+v+"."},
            {t:"Soustraire "+a3+" des deux côtés.",fb:"Dans "+a3+v+", la variable est multipliée par "+a3+", et la soustraction ne défait pas la multiplication."}];
     sol="Préservation de l'égalité : ce qu'on fait à un côté doit être fait à l'autre. La multiplication par "+a3+" se défait en divisant par "+a3+", et il faut le faire des deux côtés.\\[ \\begin{aligned} "+a3+v+" \\div "+a3+" &= "+b3+" \\div "+a3+" \\\\ "+v+" &= "+x3+" \\end{aligned} \\] L'étape est <b>diviser les deux côtés par "+a3+"</b>.";
@@ -3751,9 +3781,9 @@ E("u6-verify-two-step", 6, ["8.16","8.17"], 2, "gen", function(){
   var corrStmt=cand+" substitué : "+a+"("+cand+") + "+b+" = "+lhs+(isSol?", et "+lhs+" = "+c+", alors "+cand+" est une solution." : ", et "+lhs+" n'est pas "+c+", alors "+cand+" n'est pas une solution.");
   var wrongArith=(a*cand-b);
   var distr=[
-    {t:cand+" substitué : "+a+"("+cand+") + "+b+" = "+wrongArith+(isSol?", et cela donne "+c+", alors "+cand+" est une solution." : ", alors "+cand+" est une solution."),fb:"Ce calcul soustrait "+b+" au lieu de l'additionner. Refais la substitution avec soin."},
-    {t:cand+" substitué : "+a+"("+cand+") + "+b+" = "+lhs+(isSol?", alors "+cand+" n'est pas une solution." : ", et "+lhs+" = "+c+", alors "+cand+" est une solution."),fb:"La valeur de substitution, "+lhs+", est bonne, mais la conclusion est à l'envers : compare "+lhs+" avec le côté droit, "+c+"."},
-    {t:cand+" substitué : ("+a+" + "+b+")("+cand+") = "+((a+b)*cand)+(isSol?", alors "+cand+" est une solution." : ", alors "+cand+" n'est pas une solution."),fb:"Cela additionne le coefficient numérique et le terme constant avant de multiplier. Multiplie "+a+" par "+cand+" d'abord, puis additionne "+b+"."}
+    {t:cand+" substitué : "+a+"("+cand+") + "+b+" = "+wrongArith+(isSol?", et cela donne "+c+", alors "+cand+" est une solution." : ", et cela donne aussi "+c+", alors "+cand+" est une solution."),fb:"Ce calcul soustrait "+b+" au lieu de l'additionner. Refais la substitution avec soin."},
+    {t:cand+" substitué : "+a+"("+cand+") + "+b+" = "+lhs+(isSol?", alors "+cand+" n'est pas une solution." : ", et "+lhs+" = "+c+" exactement, alors "+cand+" est une solution."),fb:"La valeur de substitution, "+lhs+", est bonne, mais la conclusion est à l'envers : compare "+lhs+" avec le côté droit, "+c+"."},
+    {t:cand+" substitué : ("+a+" + "+b+")("+cand+") = "+((a+b)*cand)+(isSol?", alors "+cand+" est une solution." : ", alors "+cand+" n'est pas une solution, selon cette vérification."),fb:"Cela additionne le coefficient numérique et le terme constant avant de multiplier. Multiplie "+a+" par "+cand+" d'abord, puis additionne "+b+"."}
   ];
   var prompt="Quel énoncé vérifie correctement si \\("+v+" = "+cand+"\\) est une solution de \\("+a+v+" + "+b+" = "+c+"\\) ?";
   var sol="Substitue "+cand+" à "+v+" et compare les deux côtés.\\[ \\begin{aligned} "+a+v+" + "+b+" &= "+a+"("+cand+") + "+b+" \\\\ &= "+lhs+" \\end{aligned} \\] Le côté droit vaut "+c+", alors <b>"+cand+" "+(isSol?"est une solution":"n'est pas une solution")+"</b>.";
@@ -3764,7 +3794,7 @@ E("u6-visual-steps", 6, ["8.13","8.8"], 2, "var", varset([
   function(){
     var q=mcq("La balance modélise \\(x + 3 = 10\\). Quelle action est la prochaine étape pour la résoudre, selon la méthode de la balance ?",
       {t:"Enlever 3 unités des deux plateaux, ce qui laisse x en équilibre avec 7.",fb:"Oui : la même quantité quitte les deux plateaux, alors la balance tient et x est isolé."},
-      [{t:"Enlever 3 unités du plateau gauche seulement, ce qui laisse x en équilibre avec 10.",fb:"Enlever d'un seul plateau brise l'équilibre : les deux plateaux doivent changer de la même façon."},
+      [{t:"Enlever 3 unités du plateau gauche, ce qui laisse x en équilibre avec 10.",fb:"Enlever d'un seul plateau brise l'équilibre : les deux plateaux doivent changer de la même façon."},
        {t:"Ajouter 3 unités aux deux plateaux, ce qui laisse x + 6 en équilibre avec 13.",fb:"Cela garde l'équilibre, mais on s'éloigne d'isoler x."},
        {t:"Enlever 10 unités des deux plateaux, ce qui laisse x en équilibre avec 3.",fb:"Le plateau droit contient 10 unités en tout, avec x inconnu à gauche; l'étape enlève les 3 unités libres à côté de x."}],
       "Les 3 unités libres à côté de x sont enlevées des deux plateaux.\\[ \\begin{aligned} x + 3 - 3 &= 10 - 3 \\\\ x &= 7 \\end{aligned} \\] La prochaine étape est <b>enlever 3 unités des deux plateaux</b>.",
@@ -3822,8 +3852,8 @@ E("u6-verify-one-step", 6, ["8.10","8.11"], 2, "var", varset([
   function(){
     return mcq("Quel énoncé vérifie correctement si \\(x = 7\\) est une solution de \\(x + 4 = 11\\) ?",
       {t:"7 substitué : 7 + 4 = 11, et 11 = 11, alors 7 est une solution.",fb:"Oui : la substitution donne exactement le côté droit, alors la valeur est une solution."},
-      [{t:"7 substitué : 7 + 4 = 10, alors 7 n'est pas une solution.",fb:"Le calcul est faux : 7 + 4 = 11, et non 10."},
-       {t:"7 substitué : 7 - 4 = 3, alors 7 n'est pas une solution.",fb:"Cela soustrait 4. L'équation additionne 4 à la variable, alors la vérification additionne aussi."},
+      [{t:"7 substitué : 7 + 4 = 10, et 10 n'est pas 11, alors 7 n'est pas une solution.",fb:"Le calcul est faux : 7 + 4 = 11, et non 10."},
+       {t:"7 substitué : 7 - 4 = 3, et 3 n'est pas 11, alors 7 n'est pas une solution.",fb:"Cela soustrait 4. L'équation additionne 4 à la variable, alors la vérification additionne aussi."},
        {t:"7 substitué : 7 + 4 = 11, alors 7 n'est pas une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : les côtés correspondent, alors 7 est une solution."}],
       "Substitue 7 à x et compare les côtés.\\[ \\begin{aligned} x + 4 &= 7 + 4 \\\\ &= 11 \\end{aligned} \\] Les côtés correspondent, alors <b>7 est une solution</b>.",
       {mode:"verify-one-1"});
@@ -3831,26 +3861,26 @@ E("u6-verify-one-step", 6, ["8.10","8.11"], 2, "var", varset([
   function(){
     return mcq("Quel énoncé vérifie correctement si \\(x = 10\\) est une solution de \\(x - 3 = 8\\) ?",
       {t:"10 substitué : 10 - 3 = 7, et 7 n'est pas 8, alors 10 n'est pas une solution.",fb:"Oui : la substitution donne 7, ce qui ne correspond pas au côté droit, 8."},
-      [{t:"10 substitué : 10 - 3 = 8, alors 10 est une solution.",fb:"Le calcul est faux : 10 - 3 = 7, et non 8."},
-       {t:"10 substitué : 10 + 3 = 13, alors 10 n'est pas une solution.",fb:"Cela additionne 3. L'équation soustrait 3 de la variable, alors la vérification soustrait aussi."},
-       {t:"10 substitué : 10 - 3 = 7, alors 10 est une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : 7 n'est pas égal à 8."}],
+      [{t:"10 substitué : 10 - 3 = 8, et 8 = 8 comme requis, alors 10 est une solution.",fb:"Le calcul est faux : 10 - 3 = 7, et non 8."},
+       {t:"10 substitué : 10 + 3 = 13, et 13 n'est pas 8, alors 10 n'est pas une solution.",fb:"Cela additionne 3. L'équation soustrait 3 de la variable, alors la vérification soustrait aussi."},
+       {t:"10 substitué : 10 - 3 = 7, et 7 n'est pas 8, alors 10 est une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : 7 n'est pas égal à 8."}],
       "Substitue 10 à x et compare les côtés.\\[ \\begin{aligned} x - 3 &= 10 - 3 \\\\ &= 7 \\end{aligned} \\] Le côté droit vaut 8, alors <b>10 n'est pas une solution</b>.",
       {mode:"verify-one-2"});
   },
   function(){
     return mcq("Quel énoncé vérifie correctement si \\(x = 8\\) est une solution de \\(x + 6 = 15\\) ?",
       {t:"8 substitué : 8 + 6 = 14, et 14 n'est pas 15, alors 8 n'est pas une solution.",fb:"Oui : la substitution donne 14, ce qui ne correspond pas au côté droit, 15."},
-      [{t:"8 substitué : 8 + 6 = 15, alors 8 est une solution.",fb:"Le calcul est faux : 8 + 6 = 14, et non 15."},
-       {t:"8 substitué : 8 - 6 = 2, alors 8 n'est pas une solution.",fb:"Cela soustrait 6. L'équation additionne 6 à la variable, alors la vérification additionne aussi."},
-       {t:"8 substitué : 8 + 6 = 14, alors 8 est une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : 14 n'est pas égal à 15."}],
+      [{t:"8 substitué : 8 + 6 = 15, et 15 = 15 comme requis, alors 8 est une solution.",fb:"Le calcul est faux : 8 + 6 = 14, et non 15."},
+       {t:"8 substitué : 8 - 6 = 2, et 2 n'est pas 15, alors 8 n'est pas une solution.",fb:"Cela soustrait 6. L'équation additionne 6 à la variable, alors la vérification additionne aussi."},
+       {t:"8 substitué : 8 + 6 = 14, et 14 n'est pas 15, alors 8 est une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : 14 n'est pas égal à 15."}],
       "Substitue 8 à x et compare les côtés.\\[ \\begin{aligned} x + 6 &= 8 + 6 \\\\ &= 14 \\end{aligned} \\] Le côté droit vaut 15, alors <b>8 n'est pas une solution</b>.",
       {mode:"verify-one-3"});
   },
   function(){
     return mcq("Quel énoncé vérifie correctement si \\(x = 7\\) est une solution de \\(x - 5 = 2\\) ?",
       {t:"7 substitué : 7 - 5 = 2, et 2 = 2, alors 7 est une solution.",fb:"Oui : la substitution donne exactement le côté droit, alors la valeur est une solution."},
-      [{t:"7 substitué : 7 - 5 = 3, alors 7 n'est pas une solution.",fb:"Le calcul est faux : 7 - 5 = 2, et non 3."},
-       {t:"7 substitué : 7 + 5 = 12, alors 7 n'est pas une solution.",fb:"Cela additionne 5. L'équation soustrait 5 de la variable, alors la vérification soustrait aussi."},
+      [{t:"7 substitué : 7 - 5 = 3, et 3 n'est pas 2, alors 7 n'est pas une solution.",fb:"Le calcul est faux : 7 - 5 = 2, et non 3."},
+       {t:"7 substitué : 7 + 5 = 12, et 12 n'est pas 2, alors 7 n'est pas une solution.",fb:"Cela additionne 5. L'équation soustrait 5 de la variable, alors la vérification soustrait aussi."},
        {t:"7 substitué : 7 - 5 = 2, alors 7 n'est pas une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : les côtés correspondent, alors 7 est une solution."}],
       "Substitue 7 à x et compare les côtés.\\[ \\begin{aligned} x - 5 &= 7 - 5 \\\\ &= 2 \\end{aligned} \\] Les côtés correspondent, alors <b>7 est une solution</b>.",
       {mode:"verify-one-4"});
@@ -3858,9 +3888,9 @@ E("u6-verify-one-step", 6, ["8.10","8.11"], 2, "var", varset([
   function(){
     return mcq("Quel énoncé vérifie correctement si \\(x = 12\\) est une solution de \\(x + 9 = 20\\) ?",
       {t:"12 substitué : 12 + 9 = 21, et 21 n'est pas 20, alors 12 n'est pas une solution.",fb:"Oui : la substitution donne 21, ce qui ne correspond pas au côté droit, 20."},
-      [{t:"12 substitué : 12 + 9 = 20, alors 12 est une solution.",fb:"Le calcul est faux : 12 + 9 = 21, et non 20."},
-       {t:"12 substitué : 12 - 9 = 3, alors 12 n'est pas une solution.",fb:"Cela soustrait 9. L'équation additionne 9 à la variable, alors la vérification additionne aussi."},
-       {t:"12 substitué : 12 + 9 = 21, alors 12 est une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : 21 n'est pas égal à 20."}],
+      [{t:"12 substitué : 12 + 9 = 20, et 20 = 20 comme requis, alors 12 est une solution.",fb:"Le calcul est faux : 12 + 9 = 21, et non 20."},
+       {t:"12 substitué : 12 - 9 = 3, et 3 n'est pas 20, alors 12 n'est pas une solution.",fb:"Cela soustrait 9. L'équation additionne 9 à la variable, alors la vérification additionne aussi."},
+       {t:"12 substitué : 12 + 9 = 21, et 21 n'est pas 20, alors 12 est une solution.",fb:"La substitution est bonne, mais la conclusion est à l'envers : 21 n'est pas égal à 20."}],
       "Substitue 12 à x et compare les côtés.\\[ \\begin{aligned} x + 9 &= 12 + 9 \\\\ &= 21 \\end{aligned} \\] Le côté droit vaut 20, alors <b>12 n'est pas une solution</b>.",
       {mode:"verify-one-5"});
   }
@@ -3967,7 +3997,7 @@ E("u6-verify-error", 6, ["8.16","8.10"], 3, "var", varset([
     return mcq("Ana résout \\(4x - 3 = 29\\) en écrivant \\(4x = 26\\), puis \\(x = 6,5\\). Quelle est la bonne solution ?",
       {t:"8",fb:"Oui : en additionnant 3 aux deux côtés, on obtient 4x = 32, et en divisant par 4, on obtient 8."},
       [{t:"6,5",fb:"C'est la réponse d'Ana. Elle a soustrait 3 du côté droit au lieu de le rajouter."},
-       {t:"32",fb:"C'est la valeur de 4x après la bonne première étape, et non la valeur de x."},
+       {t:"32,0",fb:"C'est la valeur de 4x après la bonne première étape, et non la valeur de x."},
        {t:"7",fb:"Vérifie : 4(7) - 3 = 25, et non 29."}],
       "L'erreur d'Ana est à la première étape : le 3 soustrait doit être rajouté des deux côtés.\\[ \\begin{aligned} 4x - 3 &= 29 \\\\ 4x &= 32 \\\\ x &= 8 \\end{aligned} \\] La bonne solution est <b>8</b>. Vérification : 4(8) - 3 = 29.",
       {mode:"verify-error-3"});
@@ -4124,6 +4154,7 @@ E("u7-mean-basic",7,["11.6"],1,"gen",function(){
   var cand=u7numOpts(m,[fmtD(m+1),fmtD(m-1),fmtD(u7median(vals)),fmtD(m+2),fmtD(Math.max.apply(null,vals))]).map(function(v){return String(v);});
   var seen={};var ds=[];cand.forEach(function(v){if(v!==ms&&!seen[v]){seen[v]=1;ds.push({t:v,fb:"Cette valeur n'est pas égale au total divisé par "+n+". Additionne d'abord toutes les valeurs, puis divise par le nombre de valeurs."});}});
   while(ds.length<3){var v=fmtD(m+ds.length+2);if(v!==ms&&!seen[v]){seen[v]=1;ds.push({t:v,fb:"Additionne d'abord toutes les valeurs, puis divise par "+n+"."});}}
+  ds=precPair(ms,ds);
   var q=mcq("Un élève a ces "+ctx+" : "+vals.join(", ")+". Quelle est la moyenne ?",
     {t:ms,fb:"Oui : le total est "+fmtD(u7mean(vals)*n)+", et "+fmtD(u7mean(vals)*n)+" divisé par "+n+" donne "+ms+"."},ds.slice(0,3),
     "Additionne les valeurs, puis divise par le nombre de valeurs. \\[ \\begin{aligned} \\text{total} &= "+vals.join(" + ")+" = "+fmtD(m*n)+" \\\\ \\text{moyenne} &= "+fmtD(m*n)+" \\div "+n+" = "+ms+" \\end{aligned} \\] La moyenne est <b>"+ms+"</b>.",
@@ -4147,6 +4178,7 @@ E("u7-median-mode",7,["11.6"],1,"gen",function(){
   var cand2=u7numOpts(med,[fmtD(u7mean(vals)),srt[0],srt[srt.length-1],med+1]).map(function(v){return String(v);});
   var ds2=cand2.filter(function(v){return v!==fmtD(med);}).slice(0,3).map(function(v){return {t:v,fb:"Mets d'abord les valeurs en ordre. La médiane est la valeur du milieu de la liste ordonnée."};});
   while(ds2.length<3){var w=fmtD(med+ds2.length+2);ds2.push({t:w,fb:"Mets d'abord les valeurs en ordre, puis prends celle du milieu."});}
+  ds2=precPair(fmtD(med),ds2);
   return mcq("Ensemble de données : "+vals.join(", ")+". Quelle est la médiane ?",{t:fmtD(med),fb:"Oui : en ordre, la liste est "+srt.join(", ")+", et la valeur du milieu est "+fmtD(med)+"."},ds2,
     "Mets les valeurs en ordre : "+srt.join(", ")+". Avec "+n+" valeurs, la position du milieu contient <b>"+fmtD(med)+"</b>.",{mode:"median"});
 },["Mets d'abord les valeurs en ordre pour la médiane; compte les fréquences pour le mode.","Commence par réécrire l'ensemble de données en ordre croissant."]);
@@ -4392,7 +4424,7 @@ E("u7-exp-vs-theor",7,["12.6"],2,"gen",function(){
     var other=larger.indexOf("expérimentale")>=0?"La probabilité théorique est plus grande":"La probabilité expérimentale est plus grande";
     return mcq("En "+trials+" essais consistant à "+theo[0]+", le résultat s'est produit "+obs+" fois. Quel énoncé compare correctement les probabilités ?",
       {t:larger,fb:"Oui : la valeur expérimentale est "+u7fracStr(obs,trials)+" et la valeur théorique est "+u7fracStr(theo[1],theo[2])+", et leur comparaison donne ce résultat."},
-      [{t:other,fb:"Compare directement les deux valeurs : l'expérimentale est "+obs+"/"+trials+", la théorique est "+theo[1]+"/"+theo[2]+"."},{t:"Les deux probabilités sont égales",fb:"Les comptes ne correspondent pas exactement à la part théorique, donc les probabilités diffèrent."},{t:"La probabilité expérimentale ne peut pas être comparée à la probabilité théorique",fb:"Les deux sont des fractions entre 0 et 1, donc on peut les comparer directement."}],
+      [{t:other,fb:"Compare directement les deux valeurs : l'expérimentale est "+obs+"/"+trials+", la théorique est "+theo[1]+"/"+theo[2]+"."},{t:"Les deux probabilités sont exactement égales",fb:"Les comptes ne correspondent pas exactement à la part théorique, donc les probabilités diffèrent."},{t:"Les deux ne peuvent pas se comparer directement",fb:"Les deux sont des fractions entre 0 et 1, donc on peut les comparer directement."}],
       "Probabilité expérimentale : \\("+FR(obs,trials)+"\\). Probabilité théorique : \\("+FR(theo[1],theo[2])+"\\). En comparant les deux, <b>"+larger.toLowerCase()+"</b>.",{mode:"compare"});
   }
   var cs=u7fracStr(obs,trials);
@@ -4441,23 +4473,23 @@ E("u7-outlier-effect",7,["11.11","11.8"],2,"gen",function(){
 E("u7-outlier-judge",7,["11.10","11.12","11.13"],3,"var",varset([
   function(){return mcq("Les temps de course d'un coureur, en secondes, sont pour la plupart près de 62, mais un temps est 95 parce que le coureur s'est arrêté pour rattacher son soulier. Un rapport sur le temps typique du coureur devrait :",
     {t:"Laisser de côté le 95, parce qu'il reflète l'arrêt, pas la vitesse du coureur",fb:"Oui : la valeur aberrante vient d'une interruption, donc elle représente mal le rendement typique."},
-    [{t:"Garder le 95, parce que chaque valeur enregistrée doit toujours être utilisée",fb:"Les valeurs causées par un problème d'enregistrement ou une interruption peuvent être exclues à juste titre, avec une raison énoncée."},{t:"Garder le 95 et rapporter seulement la moyenne",fb:"La moyenne avec le 95 inclus surestimerait le plus le temps typique."},{t:"Remplacer le 95 par le temps le plus rapide",fb:"Changer une valeur enregistrée pour un autre nombre invente des données."}],
+    [{t:"Garder le 95, parce que chaque valeur enregistrée doit toujours être utilisée",fb:"Les valeurs causées par un problème d'enregistrement ou une interruption peuvent être exclues à juste titre, avec une raison énoncée."},{t:"Garder le 95 et rapporter seulement la moyenne de ses temps de course", fb:"La moyenne avec le 95 inclus surestimerait le plus le temps typique."},{t:"Remplacer le 95 par le temps le plus rapide jamais enregistré par le coureur", fb:"Changer une valeur enregistrée pour un autre nombre invente des données."}],
     "Le temps de 95 secondes a été causé par un arrêt, pas par la vitesse de course, donc il devrait être exclu quand on rapporte le rendement typique. La réponse est <b>Laisser de côté le 95</b>.",{mode:"race"});},
   function(){return mcq("Une classe recueille la taille des 20 élèves. Un élève est beaucoup plus grand que les autres, mais la mesure est exacte. Pour un rapport sur les tailles de la classe, la grande valeur devrait :",
     {t:"Être gardée, parce qu'elle est un membre véritable de la classe",fb:"Oui : une mesure exacte qui appartient au groupe reste dans le rapport, et la médiane peut limiter son attraction."},
-    [{t:"Être laissée de côté, parce qu'elle est beaucoup plus grande que les autres",fb:"La taille seule n'est pas une raison de rejeter une valeur exacte qui appartient au groupe."},{t:"Être changée pour correspondre au deuxième élève le plus grand",fb:"Ajuster une mesure exacte invente des données."},{t:"Forcer le rapport à utiliser seulement l'étendue",fb:"L'étendue met en évidence les extrêmes au lieu de décrire la classe."}],
+    [{t:"Être laissée de côté, parce qu'elle est beaucoup plus grande que les autres",fb:"La taille seule n'est pas une raison de rejeter une valeur exacte qui appartient au groupe."},{t:"Être changée pour correspondre au deuxième élève le plus grand",fb:"Ajuster une mesure exacte invente des données."},{t:"Forcer le rapport à utiliser seulement l'étendue des tailles", fb:"L'étendue met en évidence les extrêmes au lieu de décrire la classe."}],
     "La valeur est exacte et appartient au groupe, donc elle reste. On peut rapporter une médiane pour limiter son effet. La réponse est <b>Être gardée</b>.",{mode:"height"});},
   function(){return mcq("Une station météo enregistre les précipitations quotidiennes. Un jour montre 480 mm à cause d'une erreur de capteur; chaque autre jour montre moins de 30 mm. Pour le rapport mensuel des précipitations, la valeur de 480 mm devrait :",
     {t:"Être laissée de côté, parce que c'est une erreur de mesure",fb:"Oui : une valeur d'erreur ne décrit pas les vraies précipitations et fausserait gravement les totaux."},
-    [{t:"Être gardée, parce que les instruments ont toujours raison",fb:"Une valeur très éloignée de ce qui est physiquement cohérent avec le reste signale une erreur à vérifier."},{t:"Être incluse dans la moyenne, puisqu'une seule valeur ne peut pas changer grand-chose",fb:"Une seule énorme valeur peut déplacer beaucoup une moyenne, surtout dans un petit ensemble."},{t:"Être remplacée par 30 mm, la deuxième plus grande valeur",fb:"La remplacer par une valeur devinée invente des données; exclure une erreur est la démarche honnête."}],
+    [{t:"Être gardée, parce que les instruments ont toujours raison",fb:"Une valeur très éloignée de ce qui est physiquement cohérent avec le reste signale une erreur à vérifier."},{t:"Être incluse dans la moyenne, puisqu'une valeur seule change peu", fb:"Une seule énorme valeur peut déplacer beaucoup une moyenne, surtout dans un petit ensemble."},{t:"Être remplacée par 30 mm, la deuxième plus grande valeur",fb:"La remplacer par une valeur devinée invente des données; exclure une erreur est la démarche honnête."}],
     "La lecture de 480 mm est une erreur de capteur, donc elle est exclue du rapport. La réponse est <b>Être laissée de côté, parce que c'est une erreur de mesure</b>.",{mode:"rain"});},
   function(){return mcq("Une collecte de fonds totalise les dons de 12 personnes. Onze ont donné de 10 $ à 25 $, et une a donné 500 $. L'organisateur rapporte le don typique. La meilleure approche est :",
     {t:"Rapporter la médiane, et mentionner le don de 500 $ séparément",fb:"Oui : la médiane reflète le don typique, tandis que le gros don est quand même souligné."},
-    [{t:"Rapporter la moyenne, puisqu'elle donne le don typique",fb:"La moyenne ici est près de 63 $, un montant qu'aucun donateur typique n'a donné; le 500 $ la tire vers le haut."},{t:"Laisser le 500 $ hors de tous les dossiers",fb:"Le don est de l'argent réel et appartient aux totaux, même si la médiane montre mieux le don typique."},{t:"Rapporter le mode des dons",fb:"Les dons diffèrent, donc il n'y a probablement pas de mode à rapporter."}],
+    [{t:"Rapporter la moyenne, puisqu'elle donne le don typique",fb:"La moyenne ici est près de 63 $, un montant qu'aucun donateur typique n'a donné; le 500 $ la tire vers le haut."},{t:"Laisser le don de 500 $ hors de tous les dossiers de l'organisateur", fb:"Le don est de l'argent réel et appartient aux totaux, même si la médiane montre mieux le don typique."},{t:"Rapporter le mode des dons donnés par les douze personnes", fb:"Les dons diffèrent, donc il n'y a probablement pas de mode à rapporter."}],
     "Le don de 500 $ est véritable, donc il reste dans les dossiers, mais la médiane représente mieux un don typique. La réponse est <b>Rapporter la médiane, et mentionner le don de 500 $ séparément</b>.",{mode:"donation"});},
   function(){return mcq("Dans quelle situation une valeur aberrante devrait-elle être gardée dans les données quand on rapporte des résultats ?",
     {t:"Un joueur de basketball marque 41 points dans un match alors qu'il marque habituellement près de 15 points",fb:"Oui : le gros match a vraiment eu lieu et fait partie du dossier du joueur."},
-    [{t:"Une balance lit mal une masse et donne 900 kg pour un objet de 9 kg",fb:"Cette valeur est une erreur d'instrument, pas un vrai résultat."},{t:"Un temps est tapé 450 secondes au lieu de 45,0 secondes",fb:"Cette valeur est une erreur de frappe et devrait être corrigée ou exclue."},{t:"Un capteur de température laissé en plein soleil lit bien au-dessus de la température de l'air",fb:"Cette lecture ne mesure pas ce que l'étude veut mesurer, donc elle devrait être exclue."}],
+    [{t:"Une balance lit mal une masse et donne 900 kg pour un objet de 9 kg dans toute l'expérience du laboratoire", fb:"Cette valeur est une erreur d'instrument, pas un vrai résultat."},{t:"Un temps est tapé 450 secondes au lieu de 45,0 secondes dans le tableau des résultats de l'équipe", fb:"Cette valeur est une erreur de frappe et devrait être corrigée ou exclue."},{t:"Un capteur de température laissé en plein soleil lit bien au-dessus de la température de l'air",fb:"Cette lecture ne mesure pas ce que l'étude veut mesurer, donc elle devrait être exclue."}],
     "Un rendement remarquable et véritable appartient aux données. Les erreurs d'instruments ou de frappe n'y appartiennent pas. La réponse est <b>Un joueur de basketball marque 41 points dans un match</b>.",{mode:"keep"});}
 ]),["Décide d'abord si la valeur aberrante est une donnée véritable ou une erreur, puis choisis le traitement.","Commence par te demander ce qui a causé la valeur inhabituelle."]);
 
@@ -4505,19 +4537,19 @@ E("u7-zero-one",7,["12.2","12.3"],3,"var",varset([
     "Aucune bille verte n'est dans le sac, donc en piger une est impossible. La réponse est <b>Piger une bille verte</b>.",{mode:"zero"});},
   function(){return mcq("Quel évènement a une probabilité de 1 ?",
     {t:"Obtenir un nombre inférieur à 7 avec un dé à six faces",fb:"Oui : chaque face du dé est inférieure à 7, donc c'est certain."},
-    [{t:"Obtenir un 6 avec un dé à six faces",fb:"Une seule des six faces est un 6, donc la probabilité est inférieure à 1."},{t:"Obtenir face avec une pièce",fb:"Pile est aussi possible, donc la probabilité est inférieure à 1."},{t:"Piger une carte rouge dans un jeu complet",fb:"Des cartes noires sont aussi dans le jeu, donc ce n'est pas certain."}],
+    [{t:"Obtenir un 6 avec un dé à six faces en un seul lancer de dé",fb:"Une seule des six faces est un 6, donc la probabilité est inférieure à 1."},{t:"Obtenir face avec une pièce au premier lancer",fb:"Pile est aussi possible, donc la probabilité est inférieure à 1."},{t:"Piger une carte rouge dans un jeu complet de cartes",fb:"Des cartes noires sont aussi dans le jeu, donc ce n'est pas certain."}],
     "Les six faces sont inférieures à 7, donc l'évènement se produit toujours. La réponse est <b>Obtenir un nombre inférieur à 7</b>.",{mode:"one"});},
   function(){return mcq("Quelle paire d'évènements est indépendante ?",
     {t:"Lancer une pièce et lancer un dé",fb:"Oui : le résultat de la pièce ne peut pas changer le résultat du dé, et le dé ne peut pas changer la pièce."},
-    [{t:"Piger deux cartes d'un jeu sans remettre la première",fb:"La première pige change ce qui reste, donc la deuxième pige en dépend."},{t:"Choisir un élève, puis choisir le partenaire de laboratoire de cet élève dans le même groupe",fb:"Le premier choix restreint qui peut être choisi ensuite, donc les évènements sont liés."},{t:"Piger une bille dans un sac, puis en piger une autre dans ce qui reste",fb:"Laisser la première bille dehors change le sac pour la deuxième pige."}],
+    [{t:"Piger deux cartes sans les remettre",fb:"La première pige change ce qui reste, donc la deuxième pige en dépend."},{t:"Choisir un élève et son partenaire",fb:"Le premier choix restreint qui peut être choisi ensuite, donc les évènements sont liés."},{t:"Piger deux billes sans les remettre",fb:"Laisser la première bille dehors change le sac pour la deuxième pige."}],
     "Une pièce et un dé ne s'influencent pas, donc les évènements sont indépendants. La réponse est <b>Lancer une pièce et lancer un dé</b>.",{mode:"indep"});},
   function(){return mcq("Une roulette compte 4 sections égales, toutes de couleur jaune. Quelle est la probabilité de tomber sur le jaune, et de quel type d'évènement s'agit-il ?",
     {t:"Probabilité 1, un évènement certain",fb:"Oui : chaque section est jaune, donc la roulette tombe toujours sur le jaune."},
-    [{t:"Probabilité 0, un évènement impossible",fb:"Tomber sur le jaune se produit toujours ici, le contraire d'impossible."},{t:"Probabilité 1/4, parce qu'il y a 4 sections",fb:"Les 4 sections sont jaunes, donc 4 sections sur 4 correspondent, ce qui donne une probabilité de 1."},{t:"Probabilité 4, parce qu'il y a 4 sections jaunes",fb:"Les probabilités ne dépassent jamais 1."}],
+    [{t:"Probabilité 0, un évènement impossible",fb:"Tomber sur le jaune se produit toujours ici, le contraire d'impossible."},{t:"Probabilité 1/4, pour les 4 sections",fb:"Les 4 sections sont jaunes, donc 4 sections sur 4 correspondent, ce qui donne une probabilité de 1."},{t:"Probabilité 4, pour les 4 sections jaunes",fb:"Les probabilités ne dépassent jamais 1."}],
     "Les 4 sections sur 4 sont jaunes : \\(P = "+FR(4,4)+" = 1\\). La réponse est <b>Probabilité 1, un évènement certain</b>.",{mode:"certain"});},
   function(){return mcq("Quelle paire d'évènements est indépendante ?",
     {t:"Faire tourner une roulette et lancer une pièce",fb:"Oui : aucun des deux résultats ne peut influencer l'autre."},
-    [{t:"Piger un nom dans un chapeau, puis piger un deuxième nom dans le même chapeau",fb:"Le premier nom est parti, ce qui change la deuxième pige."},{t:"Lancer un dé, puis marquer le double si le lancer est un 6",fb:"Le pointage dépend directement du résultat du dé."},{t:"Choisir un capitaine, puis choisir un cocapitaine parmi les joueurs restants",fb:"Le premier choix retire un joueur, ce qui change le deuxième choix."}],
+    [{t:"Piger deux noms d'un chapeau sans remise",fb:"Le premier nom est parti, ce qui change la deuxième pige."},{t:"Lancer un dé, puis doubler les points sur un 6",fb:"Le pointage dépend directement du résultat du dé."},{t:"Choisir un capitaine, puis un cocapitaine",fb:"Le premier choix retire un joueur, ce qui change le deuxième choix."}],
     "La roulette et la pièce ne s'influencent pas, donc les évènements sont indépendants. La réponse est <b>Faire tourner une roulette et lancer une pièce</b>.",{mode:"indep2"});}
 ]),["Une probabilité de 0 signifie impossible et une probabilité de 1 signifie certain; des évènements indépendants ne peuvent pas s'influencer.","Commence par te demander si l'évènement peut se produire, se produit toujours, ou dépend de l'autre évènement."]);
 
@@ -4653,7 +4685,7 @@ E("u8-read-point",8,["10.7"],1,"gen",function(){
 E("u8-env-examples",8,["10.2","10.3"],1,"var",varset([
   function(){return mcq("Lequel de ces exemples montre une paire de segments de droite parallèles ?",
     {t:"Les deux rails d'une voie ferrée",fb:"Oui : les rails sont côte à côte, toujours à la même distance."},
-    [{t:"Les deux bords qui se rencontrent au coin d'un livre",fb:"Les bords qui se rencontrent à un coin forment un angle; à un coin droit, ils sont perpendiculaires."},{t:"Les aiguilles d'une horloge à 3 h 00",fb:"À 3 h 00, les aiguilles forment un angle droit, donc elles sont perpendiculaires, pas parallèles."},{t:"Les deux traits de la lettre T",fb:"Les traits d'un T se rencontrent à angle droit, donc ils sont perpendiculaires."}],
+    [{t:"Les deux bords au coin d'un livre",fb:"Les bords qui se rencontrent à un coin forment un angle; à un coin droit, ils sont perpendiculaires."},{t:"Les aiguilles d'une horloge à 3 h 00",fb:"À 3 h 00, les aiguilles forment un angle droit, donc elles sont perpendiculaires, pas parallèles."},{t:"Les deux traits de la lettre T",fb:"Les traits d'un T se rencontrent à angle droit, donc ils sont perpendiculaires."}],
     "Les rails d'une voie ferrée restent à la même distance et ne se rencontrent jamais : ils sont parallèles. La réponse est <b>Les deux rails d'une voie ferrée</b>.",{mode:"rail"});},
   function(){return mcq("Lequel de ces exemples montre une paire de segments de droite perpendiculaires ?",
     {t:"Les bords du coin d'un cadre de fenêtre",fb:"Oui : les bords d'un coin de fenêtre droit se rencontrent à 90 degrés."},
@@ -4661,15 +4693,15 @@ E("u8-env-examples",8,["10.2","10.3"],1,"var",varset([
     "Le coin d'un cadre de fenêtre se rencontre à 90 degrés, ce qui est perpendiculaire. La réponse est <b>Les bords du coin d'un cadre de fenêtre</b>.",{mode:"window"});},
   function(){return mcq("Un élève cherche des segments parallèles dans la classe. Quelle trouvaille est correcte ?",
     {t:"Les bords du haut et du bas du tableau blanc",fb:"Oui : les bords opposés du tableau vont dans la même direction et ne se rencontrent jamais."},
-    [{t:"Le bord d'un pupitre et la ligne du plancher qu'il touche",fb:"Ils se rencontrent près du pied du pupitre, à un angle, au lieu d'être côte à côte."},{t:"Les deux côtés du coin d'un écran d'ordinateur portable ouvert",fb:"Les côtés qui se rencontrent au coin de l'écran forment un angle, pas une paire parallèle."},{t:"Les bandes qui se rencontrent au coin d'un motif de drapeau",fb:"Les bandes qui se rencontrent à un coin se croisent ou se touchent, donc ce ne sont pas des segments parallèles."}],
+    [{t:"Le bord d'un pupitre et la ligne du plancher",fb:"Ils se rencontrent près du pied du pupitre, à un angle, au lieu d'être côte à côte."},{t:"Les deux côtés du coin d'un écran portable ouvert",fb:"Les côtés qui se rencontrent au coin de l'écran forment un angle, pas une paire parallèle."},{t:"Les bandes au coin d'un motif de drapeau",fb:"Les bandes qui se rencontrent à un coin se croisent ou se touchent, donc ce ne sont pas des segments parallèles."}],
     "Les bords opposés du tableau blanc sont parallèles. La réponse est <b>Les bords du haut et du bas du tableau blanc</b>.",{mode:"board"});},
   function(){return mcq("Lequel de ces exemples montre des segments perpendiculaires dans l'environnement ?",
     {t:"Un mât de drapeau et la ligne du sol à sa base",fb:"Oui : un mât vertical rencontre le sol horizontal à angle droit."},
-    [{t:"Les barreaux d'une échelle",fb:"Les barreaux d'une échelle sont côte à côte : ils sont parallèles entre eux."},{t:"Les côtés opposés d'une patinoire de hockey",fb:"Les côtés opposés de la patinoire vont dans la même direction : parallèles."},{t:"Les deux longs bords d'une planche d'étagère",fb:"Les longs bords d'une même planche sont côte à côte : parallèles."}],
+    [{t:"Les barreaux d'une échelle, espacés l'un au-dessus de l'autre",fb:"Les barreaux d'une échelle sont côte à côte : ils sont parallèles entre eux."},{t:"Les côtés opposés d'une patinoire de hockey",fb:"Les côtés opposés de la patinoire vont dans la même direction : parallèles."},{t:"Les deux longs bords d'une planche d'étagère",fb:"Les longs bords d'une même planche sont côte à côte : parallèles."}],
     "Le mât est vertical et le sol est horizontal, et ils se rencontrent à 90 degrés. La réponse est <b>Un mât de drapeau et la ligne du sol à sa base</b>.",{mode:"pole"});},
   function(){return mcq("Quelle paire de segments est parallèle ?",
     {t:"Le bord du haut et le bord du bas d'une porte",fb:"Oui : les bords du haut et du bas d'une porte vont dans la même direction et ne se rencontrent jamais."},
-    [{t:"Les deux bords qui se rencontrent au coin d'une page",fb:"Les bords qui se rencontrent à un coin forment un angle (90 degrés sur une page), pas une paire parallèle."},{t:"Les traits vertical et horizontal de la lettre L",fb:"Ces traits se rencontrent à angle droit : perpendiculaires."},{t:"Le bord d'une tablette et le bord du mur qu'il rencontre au coin de la pièce",fb:"Ces bords se rencontrent au coin, donc ils ne peuvent pas être parallèles."}],
+    [{t:"Les bords qui se rencontrent au coin d'une page",fb:"Les bords qui se rencontrent à un coin forment un angle (90 degrés sur une page), pas une paire parallèle."},{t:"Les traits vertical et horizontal de la lettre L",fb:"Ces traits se rencontrent à angle droit : perpendiculaires."},{t:"Le bord d'une tablette et le mur au coin de la pièce",fb:"Ces bords se rencontrent au coin, donc ils ne peuvent pas être parallèles."}],
     "Les bords du haut et du bas d'une porte sont parallèles. La réponse est <b>Le bord du haut et le bord du bas d'une porte</b>.",{mode:"door"});}
 ]),["Les segments parallèles restent à la même distance; les segments perpendiculaires se rencontrent à 90 degrés.","Commence par te demander si les deux segments se rencontrent, et à quel angle."]);
 
@@ -4692,23 +4724,23 @@ E("u8-bisector-env",8,["10.4","10.5"],2,"var",varset([
     "Une médiatrice croise le segment au milieu et à 90 degrés. La réponse est <b>Une droite qui coupe le segment en deux parties égales à 90 degrés</b>.",{mode:"defpb"});},
   function(){return mcq("Un jardinier veut un sentier qui est la médiatrice du bord avant d'un terrain de jardin. Quel sentier convient ?",
     {t:"Un sentier qui croise le bord exactement en son milieu, en formant un angle droit avec lui",fb:"Oui : croiser au milieu à 90 degrés, c'est exactement une médiatrice."},
-    [{t:"Un sentier qui croise le bord près d'un bout, à angle droit",fb:"Un angle droit seul ne suffit pas; le croisement doit être au milieu."},{t:"Un sentier qui croise le bord en son milieu, à un angle incliné",fb:"Le milieu seul ne suffit pas; le croisement doit aussi être à 90 degrés."},{t:"Un sentier qui suit le bord lui-même",fb:"Un sentier sur le bord ne le croise pas et ne le coupe pas en deux."}],
+    [{t:"Un sentier qui croise le bord du terrain de jardin près d'un bout, à angle droit avec ce bord",fb:"Un angle droit seul ne suffit pas; le croisement doit être au milieu."},{t:"Un sentier qui croise le bord en son milieu, à un angle incliné au point de croisement",fb:"Le milieu seul ne suffit pas; le croisement doit aussi être à 90 degrés."},{t:"Un sentier qui suit le bord lui-même, d'un bout du terrain à l'autre",fb:"Un sentier sur le bord ne le croise pas et ne le coupe pas en deux."}],
     "Le sentier doit croiser au milieu et à 90 degrés. La réponse est <b>Un sentier qui croise le bord exactement en son milieu, en formant un angle droit avec lui</b>.",{mode:"garden"});},
   function(){return mcq("Qu'est-ce que la bissectrice d'un angle ?",
     {t:"Une demi-droite qui partage un angle en deux angles égaux",fb:"Oui : les deux angles obtenus ont la même mesure."},
-    [{t:"Une demi-droite qui partage un angle en deux angles de mesures quelconques",fb:"Une bissectrice doit créer deux angles égaux, pas n'importe quels deux angles."},{t:"Une droite qui coupe les côtés de l'angle en longueurs égales",fb:"Cela décrit le partage d'un segment, pas le partage de la mesure d'un angle."},{t:"Une demi-droite tracée de l'extérieur de l'angle vers son sommet",fb:"Une bissectrice part du sommet et va à l'intérieur de l'angle."}],
+    [{t:"Une demi-droite qui partage un angle en deux angles quelconques",fb:"Une bissectrice doit créer deux angles égaux, pas n'importe quels deux angles."},{t:"Une droite qui coupe les côtés de l'angle en longueurs égales",fb:"Cela décrit le partage d'un segment, pas le partage de la mesure d'un angle."},{t:"Une demi-droite tracée de l'extérieur de l'angle vers son sommet",fb:"Une bissectrice part du sommet et va à l'intérieur de l'angle."}],
     "La bissectrice d'un angle partage l'angle en deux angles égaux. La réponse est <b>Une demi-droite qui partage un angle en deux angles égaux</b>.",{mode:"defab"});},
   function(){return mcq("Quelle action crée la bissectrice d'un angle dans une tâche de tous les jours ?",
     {t:"Plier un coin de papier pour que les deux bords du coin s'alignent exactement",fb:"Oui : le pli partage l'angle du coin en deux angles égaux."},
-    [{t:"Couper un coin de papier d'un seul coup droit",fb:"Couper le coin enlève une partie de l'angle au lieu de le partager en deux moitiés égales."},{t:"Tracer n'importe quelle droite du coin à travers la feuille",fb:"Une droite quelconque ne partage pas nécessairement l'angle en deux parties égales."},{t:"Mesurer l'angle du coin avec un rapporteur d'angle",fb:"Mesurer donne la mesure de l'angle; cela ne le partage pas."}],
+    [{t:"Couper un coin de papier d'un seul coup droit à travers le coin",fb:"Couper le coin enlève une partie de l'angle au lieu de le partager en deux moitiés égales."},{t:"Tracer n'importe quelle droite du coin jusqu'à l'autre côté de la feuille",fb:"Une droite quelconque ne partage pas nécessairement l'angle en deux parties égales."},{t:"Mesurer l'angle du coin avec un rapporteur d'angle placé sur le coin de la feuille",fb:"Mesurer donne la mesure de l'angle; cela ne le partage pas."}],
     "Plier pour que les bords correspondent fait que le pli partage l'angle en deux parties égales. La réponse est <b>Plier un coin de papier pour que les deux bords du coin s'alignent exactement</b>.",{mode:"foldab"});},
   function(){return mcq("Deux lampadaires se trouvent aux extrémités d'un sentier droit. Un banc se trouve sur la médiatrice du segment du sentier. Qu'est-ce qui est vrai pour le banc ?",
     {t:"Il est à la même distance de chaque lampadaire",fb:"Oui : chaque point d'une médiatrice est à égale distance des extrémités du segment."},
-    [{t:"Il est plus proche du lampadaire le plus près, de la moitié de la longueur du sentier",fb:"Les points de la médiatrice ne sont plus proches d'aucun des deux bouts; les distances sont égales."},{t:"Il se trouve au milieu du sentier",fb:"Un seul point de la médiatrice, le point de croisement, est le milieu; le banc peut être n'importe où sur la droite."},{t:"Il est deux fois plus loin d'un lampadaire que de l'autre",fb:"La propriété qui la définit est l'égalité des distances, pas une distance double."}],
+    [{t:"Il est plus proche d'un lampadaire, de la moitié du sentier",fb:"Les points de la médiatrice ne sont plus proches d'aucun des deux bouts; les distances sont égales."},{t:"Il se trouve exactement au milieu du sentier",fb:"Un seul point de la médiatrice, le point de croisement, est le milieu; le banc peut être n'importe où sur la droite."},{t:"Il est deux fois plus loin d'un lampadaire que de l'autre",fb:"La propriété qui la définit est l'égalité des distances, pas une distance double."}],
     "Chaque point d'une médiatrice est à la même distance des deux extrémités. La réponse est <b>Il est à la même distance de chaque lampadaire</b>.",{mode:"bench"});},
   function(){return mcq("Plier une bande de papier pour qu'un bout arrive exactement sur l'autre bout crée un pli. Le pli est :",
     {t:"La médiatrice de la longueur de la bande",fb:"Oui : aligner les bouts fait que le pli croise au milieu, et un pli rencontre la longueur à 90 degrés."},
-    [{t:"La bissectrice de l'angle du coin de la bande",fb:"Le pli aligne les deux bouts de la longueur, donc il coupe la longueur en deux, pas un angle de coin."},{t:"Une droite parallèle à la longueur de la bande",fb:"Le pli croise la longueur au lieu de passer à côté d'elle."},{t:"Le milieu lui-même",fb:"Le pli est une droite qui passe par le milieu, pas seulement le point."}],
+    [{t:"La bissectrice de l'angle du coin de la bande",fb:"Le pli aligne les deux bouts de la longueur, donc il coupe la longueur en deux, pas un angle de coin."},{t:"Une droite parallèle à la longueur de la bande",fb:"Le pli croise la longueur au lieu de passer à côté d'elle."},{t:"Le milieu lui-même, à mi-longueur de la bande",fb:"Le pli est une droite qui passe par le milieu, pas seulement le point."}],
     "Aligner les bouts place le pli au milieu, à angle droit. La réponse est <b>La médiatrice de la longueur de la bande</b>.",{mode:"foldpb"});}
 ]),["Une bissectrice ou une médiatrice partage quelque chose en deux parties égales; perpendiculaire ajoute un croisement à 90 degrés.","Commence par vérifier les deux conditions : des parties égales, et l'angle droit pour une médiatrice."]);
 
@@ -4737,19 +4769,19 @@ E("u8-bisector-reason",8,["10.15","10.16"],2,"gen",function(){
 E("u8-draw-reason",8,["10.13","10.14"],2,"var",varset([
   function(){return mcq("Un élève fait glisser une équerre le long d'une règle pour tracer une deuxième droite qui passe par un point. Pourquoi la nouvelle droite est-elle parallèle à la première ?",
     {t:"L'équerre garde le même angle avec la règle, donc la nouvelle droite a la même direction que la première",fb:"Oui : les deux droites forment des angles correspondants égaux avec la règle, ce qui les rend parallèles."},
-    [{t:"La nouvelle droite a la même longueur que la première droite",fb:"Des longueurs égales ne rendent pas des droites parallèles; c'est la direction qui compte."},{t:"La règle est plus longue que les deux droites",fb:"La longueur de la règle ne joue aucun rôle dans la direction des droites."},{t:"Le point se trouve sur la première droite",fb:"Dans cette construction, le point est en dehors de la première droite; ce sont les angles égaux qui rendent les droites parallèles."}],
+    [{t:"La nouvelle droite a la même longueur que la première droite, et des longueurs égales rendent deux droites parallèles",fb:"Des longueurs égales ne rendent pas des droites parallèles; c'est la direction qui compte."},{t:"La règle est plus longue que les deux droites, donc une droite tracée le long d'elle suit la première",fb:"La longueur de la règle ne joue aucun rôle dans la direction des droites."},{t:"Le point se trouve sur la première droite, donc la deuxième droite qui y passe doit suivre exactement la première",fb:"Dans cette construction, le point est en dehors de la première droite; ce sont les angles égaux qui rendent les droites parallèles."}],
     "Faire glisser l'équerre conserve l'angle, donc les deux droites ont la même direction. La réponse est <b>L'équerre garde le même angle avec la règle</b>.",{mode:"slide"});},
   function(){return mcq("Pour tracer une droite perpendiculaire à une droite donnée, qui passe par un point de cette droite, un élève utilise une équerre. Pourquoi cela fonctionne-t-il ?",
     {t:"Le coin d'une équerre mesure exactement 90 degrés, donc le bord tracé rencontre la droite à 90 degrés",fb:"Oui : l'angle droit de l'équerre est transféré au dessin."},
-    [{t:"L'équerre est un triangle, et les triangles contiennent des droites perpendiculaires",fb:"Seul le coin à angle droit compte ici, pas la forme triangulaire en général."},{t:"Le point est sur la droite, ce qui force un angle droit",fb:"Un point sur une droite ne crée pas un angle droit à lui seul; c'est l'équerre qui le fait."},{t:"La règle en dessous rend chaque droite tracée perpendiculaire",fb:"Une règle guide la rectitude, pas l'angle."}],
+    [{t:"L'équerre est un triangle, et les triangles contiennent des droites perpendiculaires dans un dessin comme celui-ci",fb:"Seul le coin à angle droit compte ici, pas la forme triangulaire en général."},{t:"Le point est sur la droite, ce qui force un angle droit partout où une droite passe par ce point",fb:"Un point sur une droite ne crée pas un angle droit à lui seul; c'est l'équerre qui le fait."},{t:"La règle en dessous rend chaque droite tracée perpendiculaire à la droite du dessin",fb:"Une règle guide la rectitude, pas l'angle."}],
     "Le coin de l'équerre est un vrai angle droit, donc la droite tracée est perpendiculaire. La réponse est <b>Le coin d'une équerre mesure exactement 90 degrés</b>.",{mode:"setsq"});},
   function(){return mcq("Un élève trace une droite et affirme qu'elle est parallèle à une droite donnée. Quelle vérification confirme cette affirmation ?",
     {t:"Mesure la distance entre les droites à deux endroits différents; les distances sont égales",fb:"Oui : les droites parallèles restent à la même distance partout."},
-    [{t:"Vérifie que les deux droites ont la même longueur",fb:"Des segments peuvent avoir la même longueur sans être parallèles."},{t:"Prolonge une droite et regarde si elle semble droite",fb:"La rectitude d'une droite ne dit rien sur sa direction par rapport à l'autre."},{t:"Mesure un angle à l'endroit où une règle croise une droite",fb:"Un seul angle ne compare pas les directions des deux droites."}],
+    [{t:"Vérifie que les deux droites ont la même longueur, d'un bout de chaque droite à l'autre bout",fb:"Des segments peuvent avoir la même longueur sans être parallèles."},{t:"Prolonge une droite et regarde si elle semble droite sur toute sa longueur sur la feuille",fb:"La rectitude d'une droite ne dit rien sur sa direction par rapport à l'autre."},{t:"Mesure un angle à l'endroit où une règle croise une droite, sans comparer les distances entre elles",fb:"Un seul angle ne compare pas les directions des deux droites."}],
     "Des distances égales à deux endroits confirment que les droites restent à la même distance : elles sont parallèles. La réponse est <b>Mesure la distance entre les droites à deux endroits différents; les distances sont égales</b>.",{mode:"checkpar"});},
   function(){return mcq("Quelle suite d'étapes permet de tracer une droite parallèle à une droite donnée, qui passe par un point en dehors de la droite ?",
     {t:"Place un bord de l'équerre sur la droite, appuie une règle contre l'équerre, fais glisser l'équerre le long de la règle jusqu'au point, puis trace",fb:"Oui : la règle fixe la direction pendant que l'équerre glisse jusqu'au point."},
-    [{t:"Trace n'importe quelle droite par le point et mesure sa longueur pour qu'elle égale celle de la droite donnée",fb:"Égaler une longueur ne contrôle pas la direction, donc les droites ne sont pas nécessairement parallèles."},{t:"Plie la feuille pour que le point arrive n'importe où sur la droite, puis trace le pli",fb:"Ce pli dépend de l'endroit où le point arrive et c'est une construction perpendiculaire, pas parallèle."},{t:"Trace un cercle autour du point et relie deux points du cercle",fb:"Une construction au cercle comme celle-là ne fixe pas la direction pour qu'elle corresponde à la droite donnée."}],
+    [{t:"Trace n'importe quelle droite par le point et mesure sa longueur pour qu'elle égale celle de la droite donnée, en vérifiant aux deux bouts",fb:"Égaler une longueur ne contrôle pas la direction, donc les droites ne sont pas nécessairement parallèles."},{t:"Plie la feuille pour que le point arrive n'importe où sur la droite, puis trace le pli le long du pli, d'un bord de la feuille jusqu'à l'autre bord",fb:"Ce pli dépend de l'endroit où le point arrive et c'est une construction perpendiculaire, pas parallèle."},{t:"Trace un cercle autour du point et relie deux points du cercle, puis prolonge la droite des deux côtés, au-delà du cercle",fb:"Une construction au cercle comme celle-là ne fixe pas la direction pour qu'elle corresponde à la droite donnée."}],
     "La méthode de l'équerre qui glisse conserve la direction. La réponse est <b>Place un bord de l'équerre sur la droite, appuie une règle contre l'équerre, fais glisser l'équerre le long de la règle jusqu'au point, puis trace</b>.",{mode:"seqpar"});},
   function(){return mcq("Un élève trace une droite par un point et affirme qu'elle est perpendiculaire à une droite donnée. Quelle vérification confirme cette affirmation ?",
     {t:"Mesure l'angle à l'endroit où les droites se rencontrent; il mesure 90 degrés",fb:"Oui : les droites perpendiculaires sont définies par une rencontre à 90 degrés."},
@@ -4865,7 +4897,7 @@ E("u8-transform-describe",8,["10.11"],2,"gen",function(){
   var opts=[];
   if(type==="translate"){var dx=pick([-3,-2,-1,1,2,3]);var dy=pick([-3,-2,-1,1,2,3]);if(Math.abs(dx)===Math.abs(dy))dy=dy>0?dy+1:dy-1;
     P2=[px+dx,py+dy];Q2=[qx+dx,qy+dy];correct=transText(dx,dy);
-    opts=[{t:transText(dy,dx),fb:"Cela échange les changements horizontal et vertical; vérifie d'abord le changement en x."},{t:"Réflexion par rapport à l'axe des x",fb:"Une réflexion inverserait le signe des coordonnées y; ici, les deux points se déplacent plutôt des mêmes quantités."},{t:"Réflexion par rapport à l'axe des y",fb:"Une réflexion inverserait le signe des coordonnées x; ici, les deux points se déplacent plutôt des mêmes quantités."}];
+    opts=[{t:transText(dy,dx),fb:"Cela échange les changements horizontal et vertical; vérifie d'abord le changement en x."},{t:"Réflexion par rapport à l'axe des x dans le plan cartésien",fb:"Une réflexion inverserait le signe des coordonnées y; ici, les deux points se déplacent plutôt des mêmes quantités."},{t:"Réflexion par rapport à l'axe des y dans le plan cartésien",fb:"Une réflexion inverserait le signe des coordonnées x; ici, les deux points se déplacent plutôt des mêmes quantités."}];
   } else if(type==="reflectX"){P2=[px,-py];Q2=[qx,-qy];correct="Réflexion par rapport à l'axe des x";
     opts=[{t:"Réflexion par rapport à l'axe des y",fb:"Cela inverserait les signes de x; ici, les signes de y se sont inversés et les valeurs de x sont restées."},{t:transText(P2[0]-px,P2[1]-py),fb:"Cette translation convient au point P seul, mais elle ne mène pas Q à son image; vérifie les deux sommets."},{t:transText(Q2[0]-qx,Q2[1]-qy),fb:"Cette translation convient au point Q seul, mais elle ne mène pas P à son image; vérifie les deux sommets."}];
     if(opts[1].t===opts[2].t)opts[2]={t:transText(1,P2[1]-py),fb:"Vérifie les deux sommets : une seule translation doit déplacer chaque sommet selon le même changement."};
@@ -5038,23 +5070,23 @@ E("u8-design-shape",8,["10.17","10.18"],3,"var",varset([
 E("u8-construct-verify",8,["10.13","10.14","10.15"],3,"var",varset([
   function(){return mcq("Un élève construit la médiatrice d'un segment avec des arcs de compas. Quelle vérification confirme la construction ?",
     {t:"Mesure du point de croisement à chaque extrémité; les distances sont égales, et l'angle de croisement est de 90 degrés",fb:"Oui : des moitiés égales plus un angle droit sont les deux propriétés qui la définissent."},
-    [{t:"Mesure tout le segment; il correspond à l'ouverture du compas",fb:"L'ouverture du compas est un outil de construction, pas une propriété de la médiatrice."},{t:"Vérifie que la médiatrice est plus longue que le segment",fb:"La longueur de la droite médiatrice ne fait pas partie de sa définition."},{t:"Vérifie que la médiatrice passe par une extrémité",fb:"Une médiatrice passe par le milieu, pas par une extrémité."}],
+    [{t:"Mesure tout le segment; il correspond à l'ouverture du compas utilisée pour les deux arcs tracés à partir des extrémités",fb:"L'ouverture du compas est un outil de construction, pas une propriété de la médiatrice."},{t:"Vérifie que la médiatrice est plus longue que le segment, des deux côtés du segment qu'elle croise dans le diagramme",fb:"La longueur de la droite médiatrice ne fait pas partie de sa définition."},{t:"Vérifie que la médiatrice passe par une extrémité du segment qu'elle partage en deux parties égales",fb:"Une médiatrice passe par le milieu, pas par une extrémité."}],
     "Une médiatrice doit couper le segment en deux et le croiser à 90 degrés, et mesurer confirme les deux. La réponse est <b>Mesure du point de croisement à chaque extrémité; les distances sont égales, et l'angle de croisement est de 90 degrés</b>.",{mode:"verifybis"});},
   function(){return mcq("Dans la méthode au compas pour une médiatrice, les arcs sont tracés à partir des deux extrémités avec la même ouverture de compas. Pourquoi l'ouverture doit-elle rester la même ?",
     {t:"Des rayons égaux placent les croisements des arcs à la même distance des deux extrémités, ce qui les place sur la médiatrice",fb:"Oui : les points à égale distance des deux extrémités se trouvent sur la médiatrice."},
-    [{t:"Une ouverture plus grande effacerait le segment",fb:"L'ouverture affecte la taille des arcs, pas le segment lui-même; c'est l'égalité des rayons qui compte."},{t:"Le compas ne peut pas être ajusté une fois ouvert",fb:"Un compas peut être ajusté; la méthode demande de le garder fixe pour les deux extrémités."},{t:"Des rayons égaux donnent aux arcs la même couleur",fb:"La couleur ne joue aucun rôle dans la géométrie de la construction."}],
+    [{t:"Une ouverture plus grande effacerait le segment si la pointe du compas était placée au milieu du segment que l'on partage en deux parties",fb:"L'ouverture affecte la taille des arcs, pas le segment lui-même; c'est l'égalité des rayons qui compte."},{t:"Le compas ne peut pas être ajusté une fois ouvert, donc l'ouverture choisie au départ doit servir pour chaque arc",fb:"Un compas peut être ajusté; la méthode demande de le garder fixe pour les deux extrémités."},{t:"Des rayons égaux donnent aux arcs la même couleur et la même forme quand ils se croisent sur le dessin de la construction",fb:"La couleur ne joue aucun rôle dans la géométrie de la construction."}],
     "Des rayons égaux garantissent que les croisements sont à égale distance des extrémités, ce qui définit la médiatrice. La réponse est <b>Des rayons égaux placent les croisements des arcs à la même distance des deux extrémités</b>.",{mode:"arcs"});},
   function(){return mcq("Une deuxième méthode pour la médiatrice consiste à plier une feuille pour que les deux extrémités d'un segment se rencontrent. Pourquoi le pli fonctionne-t-il comme médiatrice ?",
     {t:"Le pli envoie le segment sur lui-même avec les extrémités échangées, donc le pli croise au milieu à 90 degrés",fb:"Oui : aligner les extrémités force le pli à passer par le milieu, et un pli est perpendiculaire au segment."},
-    [{t:"Le pli est toujours la droite la plus longue sur la feuille",fb:"La longueur du pli n'a pas d'importance; c'est l'alignement des extrémités qui crée la médiatrice."},{t:"Plier double la longueur du segment",fb:"Plier ne change pas le segment; cela l'envoie sur lui-même."},{t:"Le pli passe par les deux extrémités",fb:"Le pli croise le segment en son milieu; il ne passe pas par les extrémités."}],
+    [{t:"Le pli est toujours la droite la plus longue sur la feuille, d'un coin de la feuille au coin opposé",fb:"La longueur du pli n'a pas d'importance; c'est l'alignement des extrémités qui crée la médiatrice."},{t:"Plier double la longueur du segment, parce que les deux moitiés de la feuille se superposent le long de la ligne du pli",fb:"Plier ne change pas le segment; cela l'envoie sur lui-même."},{t:"Le pli passe par les deux extrémités du segment quand la feuille est pliée en deux pour aligner les extrémités",fb:"Le pli croise le segment en son milieu; il ne passe pas par les extrémités."}],
     "Aligner les extrémités fait du pli la médiatrice. La réponse est <b>Le pli envoie le segment sur lui-même avec les extrémités échangées</b>.",{mode:"fold"});},
   function(){return mcq("Un élève trace une droite parallèle à une droite de base en copiant un angle avec un compas. Pourquoi copier l'angle fonctionne-t-il ?",
     {t:"Des angles correspondants égaux, formés avec une transversale, garantissent que les droites sont parallèles",fb:"Oui : quand une transversale forme des angles correspondants égaux, les droites sont parallèles."},
-    [{t:"L'angle copié donne à la nouvelle droite la même longueur que la droite de base",fb:"Copier un angle contrôle la direction, pas la longueur."},{t:"Le compas trace les deux droites en même temps",fb:"Les droites sont tracées séparément; les angles égaux relient leurs directions."},{t:"N'importe quel angle copié produit une droite perpendiculaire",fb:"Copier un angle reproduit la direction pour des droites parallèles; perpendiculaire demande précisément un angle de 90 degrés."}],
+    [{t:"L'angle copié donne à la nouvelle droite la même longueur que la droite de base tracée sur la feuille",fb:"Copier un angle contrôle la direction, pas la longueur."},{t:"Le compas trace les deux droites en même temps, en une seule étape de la construction",fb:"Les droites sont tracées séparément; les angles égaux relient leurs directions."},{t:"N'importe quel angle copié produit une droite perpendiculaire qui passe par le point situé sur la droite de base",fb:"Copier un angle reproduit la direction pour des droites parallèles; perpendiculaire demande précisément un angle de 90 degrés."}],
     "Des angles correspondants égaux sont le critère pour des droites parallèles, donc copier l'angle fonctionne. La réponse est <b>Des angles correspondants égaux, formés avec une transversale, garantissent que les droites sont parallèles</b>.",{mode:"copyangle"});},
   function(){return mcq("Après avoir tracé une droite qu'il dit perpendiculaire à une droite donnée, un élève la vérifie avec une équerre et trouve un petit écart au coin. Que doit conclure l'élève ?",
     {t:"La droite n'est pas exactement perpendiculaire, parce qu'un vrai angle droit s'ajuste au coin de l'équerre sans aucun écart",fb:"Oui : le coin de l'équerre est un vrai 90 degrés, donc un écart veut dire que l'angle tracé diffère de 90."},
-    [{t:"La droite est perpendiculaire, parce que les petits écarts ne comptent pas dans les constructions",fb:"La vérification existe pour repérer exactement ce genre d'erreur; l'affirmation échoue à la vérification."},{t:"L'équerre est en faute, parce que les droites tracées sont toujours exactes",fb:"Le coin de l'équerre est fabriqué comme un angle droit; la droite tracée est la partie testée."},{t:"La droite est plutôt parallèle",fb:"Un angle presque droit n'est ni perpendiculaire ni une preuve de parallèle."}],
+    [{t:"La droite est perpendiculaire, parce que les petits écarts ne comptent pas dans les constructions faites à la main avec une règle",fb:"La vérification existe pour repérer exactement ce genre d'erreur; l'affirmation échoue à la vérification."},{t:"L'équerre est en faute, parce que les droites tracées sont toujours exactes pour ce genre de vérification",fb:"Le coin de l'équerre est fabriqué comme un angle droit; la droite tracée est la partie testée."},{t:"La droite est plutôt parallèle à la droite donnée qu'elle devait croiser à angle droit, selon l'affirmation de l'élève",fb:"Un angle presque droit n'est ni perpendiculaire ni une preuve de parallèle."}],
     "L'écart montre que l'angle n'est pas exactement 90 degrés, donc la droite échoue à la vérification comme perpendiculaire. La réponse est <b>La droite n'est pas exactement perpendiculaire</b>.",{mode:"gap"});}
 ]),["La vérification mesure la propriété qui définit : des moitiés égales et 90 degrés, des angles égaux, ou des distances égales.","Commence par énoncer la propriété que la construction doit satisfaire, puis choisis la vérification qui la mesure."]);
 
