@@ -771,7 +771,7 @@ E("u1-divisibility-why", 1, ["5.1"], 1, "gen", function(){
     {d:d,n:n,S:S});
 }, ["Rappelle-toi quel test va avec ce diviseur : 3 et 9 utilisent une somme des chiffres.", "Commence par additionner tous les chiffres du nombre."]);
 
-E("u1-venn-overlap", 1, ["5.2"], 1, "gen", function(){
+E("u1-venn-overlap", 1, ["5.2"], 2, "gen", function(){
   var both=0,only2=0,only3=0,neither=0,g=0;
   while(g++<600){ var c1=ri(12,96); if(c1%6===0)both=c1; var c2=ri(11,99); if(c2%2===0&&c2%3!==0)only2=c2;
     var c3=ri(11,99); if(c3%3===0&&c3%2!==0)only3=c3; var c4=ri(11,99); if(c4%2!==0&&c4%3!==0)neither=c4;
@@ -939,6 +939,15 @@ E("u1-expression-or-equation", 1, ["8.6"], 1, "var", varset([
      {t:"Une expression a des variables et une équation n'en a jamais, dans aucun cas.", fb:"Les équations contiennent souvent des variables, comme 2x + 5 = 17."},
      {t:"Une équation peut être évaluée et une expression peut seulement être résolue dans une question comme celle-ci, quand elle est posée.", fb:"C'est le contraire : on évalue les expressions, on résout les équations."}],
     "Les expressions et les équations sont construites avec les mêmes parties. L'équation ajoute un signe égal qui affirme que les deux côtés correspondent. La réponse est <b>les mêmes parties, mais seule l'équation a un signe égal</b>.", {}); },
+  function(){ return mcq("Laquelle est une expression ?",
+    {t:"9 - 3m", fb:"Exact : c'est une combinaison de nombres et d'une variable sans signe égal."},
+    [{t:"9 - 3m = 0", fb:"Le signe égal en fait une équation."},
+     {t:"3m = 9", fb:"C'est une équation : deux côtés joints par un signe égal."},
+     {t:"9 = 3 + 6", fb:"Même avec des nombres seulement, le signe égal en fait une équation."}],
+    "Une expression n'a pas de signe égal. \\(9 - 3m\\) est le seul choix sans signe égal. La réponse est <b>9 - 3m</b>.", {}); }
+]), ["Cherche un signe égal : c'est l'élément décisif.", "Commence par vérifier chaque choix pour un signe égal."]);
+
+E("u1-expression-or-equation-judge", 1, ["8.6"], 2, "var", varset([
   function(){ return mcq("Un élève dit que \\(4x + 7 = 19\\) est une expression. Quelle est la meilleure correction ?",
     {t:"C'est une équation, parce qu'un signe égal joint deux expressions.", fb:"Exact : le signe égal en fait une équation."},
     [{t:"L'élève a raison, parce qu'elle contient une variable comme celle-ci.", fb:"Les variables apparaissent dans les expressions et dans les équations."},
@@ -950,15 +959,8 @@ E("u1-expression-or-equation", 1, ["8.6"], 1, "var", varset([
     [{t:"Calcule la valeur de 2x + 5 quand x vaut 4 pour l'expression.", fb:"C'est évaluer une expression : une valeur pour x est déjà donnée."},
      {t:"Écris 2x + 5 = 17 en mots, sous forme de phrase.", fb:"Cela décrit une expression; il n'y a pas d'égalité à satisfaire."},
      {t:"Ajoute 3 à 2x + 5 pour former une nouvelle expression.", fb:"Cela construit une nouvelle expression, pas une équation."}],
-    "Une équation demande la valeur qui rend les deux côtés égaux. Seule la première tâche fait cela. La réponse est <b>trouver la valeur de x qui rend 2x + 5 = 17 vraie</b>.", {}); },
-  function(){ return mcq("Laquelle est une expression ?",
-    {t:"9 - 3m", fb:"Exact : c'est une combinaison de nombres et d'une variable sans signe égal."},
-    [{t:"9 - 3m = 0", fb:"Le signe égal en fait une équation."},
-     {t:"3m = 9", fb:"C'est une équation : deux côtés joints par un signe égal."},
-     {t:"9 = 3 + 6", fb:"Même avec des nombres seulement, le signe égal en fait une équation."}],
-    "Une expression n'a pas de signe égal. \\(9 - 3m\\) est le seul choix sans signe égal. La réponse est <b>9 - 3m</b>.", {}); }
+    "Une équation demande la valeur qui rend les deux côtés égaux. Seule la première tâche fait cela. La réponse est <b>trouver la valeur de x qui rend 2x + 5 = 17 vraie</b>.", {}); }
 ]), ["Cherche un signe égal : c'est l'élément décisif.", "Commence par vérifier chaque choix pour un signe égal."]);
-
 E("u1-parts-in-equation", 1, ["8.5","8.6"], 1, "gen", function(){
   var a=ri(2,9), b=ri(2,12), c=ri(20,60), v=pick(["n","x","t","m"]);
   var mode=pick(["coef","var"]);
