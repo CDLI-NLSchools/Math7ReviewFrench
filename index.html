@@ -2275,7 +2275,7 @@ E("u3-tax-total", 3, ["6.12"], 3, "gen", function(){
     {price:price});
 }, ["Trouve d'abord la taxe (15 % du prix), puis ajoute-la au prix.", "Commence par multiplier le prix par 0,15 pour obtenir la taxe."]);
 
-E("u3-reasonableness", 3, ["6.4"], 2, "gen", function(){
+E("u3-reasonableness", 3, ["6.4"], 1, "gen", function(){
   var mode=ri(0,2);
   if(mode===0){
     var a=ri(32,68), b=ri(3,9), cor=a*b, given=cor/10, est=Math.round(a/10)*10*b;
@@ -3236,7 +3236,7 @@ E("u5-sub-mixed", 5, ["6.21","6.20"], 1, "gen", function(){
     sol,{mode:"sub-mixed",w1:w1,n1:n1,w2:w2,n2:n2,d:d});
 }, ["Traite les parties entières et les parties fractionnaires séparément.", "Commence par soustraire les parties entières, puis soustrais les numérateurs des parties fractionnaires."]);
 
-E("u5-model-add-figure", 5, ["6.13","6.14"], 2, "gen", function(){
+E("u5-model-add-figure", 5, ["6.13","6.14"], 1, "gen", function(){
   var d=pick([4,5,6,8,10,12]);var a=ri(1,d-2);var b=ri(1,d-1-a);var s=a+b;
   var q=mcq("Les deux bandes ombrées modélisent une somme. Chaque bande est un tout divisé en parties égales. Quelle est la somme modélisée par les bandes ?",
     {t:u5M(s,d),fb:"Oui : la première bande ombre "+a+" parties sur "+d+" et la deuxième ombre "+b+" parties sur "+d+", ce qui donne "+s+" parties de taille "+d+" en tout."},
@@ -3247,7 +3247,7 @@ E("u5-model-add-figure", 5, ["6.13","6.14"], 2, "gen", function(){
   return q;
 }, ["Chaque bande est un tout, et l'ombrage montre les parties fractionnaires.", "Commence par lire la fraction montrée par chaque bande, puis additionne-les."]);
 
-E("u5-model-sub-figure", 5, ["6.18","6.19"], 2, "gen", function(){
+E("u5-model-sub-figure", 5, ["6.18","6.19"], 1, "gen", function(){
   var d=pick([5,6,7,8,9,10,12]);var n=ri(3,d-1);var c=ri(1,n-1);var s=n-c;
   var q=mcq("La bande ombrée modélise une soustraction. Les parties barrées sont retirées. Quelle fraction de la bande reste ombrée et non barrée ?",
     {t:u5M(s,d),fb:"Oui : "+n+" parties étaient ombrées et "+c+" d'entre elles sont barrées, ce qui laisse "+s+" parties sur "+d+"."},
@@ -3696,7 +3696,7 @@ E("u6-equivalent-form", 6, ["8.3"], 1, "gen", function(){
   return mcq(prompt,corr,distr,sol,{mode:mode,a:a});
 }, ["Les équations équivalentes viennent de faire exactement la même opération aux deux côtés.", "Commence par vérifier, pour chaque choix, si les deux côtés ont été changés de la même façon."]);
 
-E("u6-balance-figure", 6, ["8.1","8.13","8.3"], 2, "gen", function(){
+E("u6-balance-figure", 6, ["8.1","8.13","8.3"], 1, "gen", function(){
   var v=pick(["x","n","m"]);var a=ri(2,6),x=ri(2,10),b=ri(2,9),c=a*x+b;
   var q=mcq("La balance du diagramme modélise \\("+a+v+" + "+b+" = "+c+"\\). Les "+b+" unités libres sont enlevées des deux plateaux. Quelle équation montre le résultat ?",
     {t:"\\("+a+v+" = "+(c-b)+"\\)",fb:"Oui : en enlevant "+b+" des deux plateaux, il reste "+a+v+" sur un plateau, en équilibre avec "+(c-b)+" sur l'autre."},
@@ -3741,7 +3741,7 @@ E("u6-problem-two-step-cr", 6, ["8.12","8.15"], 2, "gen", function(){
   return numq(tpl.p+" Donne ta réponse comme un nombre de "+tpl.u+".",x,0,sol,{mode:"problem-two-step",a:a,b:b});
 }, ["Modélise le problème avec une équation : une quantité fixe plus une quantité par unité égale le total.", "Commence par écrire l'équation, puis défais les frais ajoutés des deux côtés."]);
 
-E("u6-one-step-problem", 6, ["8.7","8.9"], 2, "gen", function(){
+E("u6-one-step-problem", 6, ["8.7","8.9"], 1, "gen", function(){
   var mode=pick(["rise","fall","deposit","score"]);
   var prompt,sol,corr,errs,x;
   if(mode==="rise"){
@@ -3790,7 +3790,7 @@ E("u6-verify-two-step", 6, ["8.16","8.17"], 2, "gen", function(){
   return mcq(prompt,{t:corrStmt,fb:"Oui : la substitution est calculée correctement et la conclusion correspond à la comparaison avec "+c+"."},distr,sol,{mode:"verify-two-step",cand:cand});
 }, ["Vérifier, c'est substituer la valeur et comparer les deux côtés de l'équation.", "Commence par remplacer la variable par la valeur donnée et par calculer le côté gauche."]);
 
-E("u6-visual-steps", 6, ["8.13","8.8"], 2, "var", varset([
+E("u6-visual-steps", 6, ["8.13","8.8"], 1, "var", varset([
   function(){
     var q=mcq("La balance modélise \\(x + 3 = 10\\). Quelle action est la prochaine étape pour la résoudre, selon la méthode de la balance ?",
       {t:"Enlever 3 unités des deux plateaux, ce qui laisse x en équilibre avec 7.",fb:"Oui : la même quantité quitte les deux plateaux, alors la balance tient et x est isolé."},
