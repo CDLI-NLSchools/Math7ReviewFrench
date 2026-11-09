@@ -1011,7 +1011,7 @@ E("u1-evaluate-expression", 1, ["7.8"], 1, "gen", function(){
     {a:a,b:b,x:x,sub:sub});
 }, ["Substitue d'abord, puis suis la priorité des opérations.", "Commence par remplacer la variable par la valeur donnée partout où elle apparaît."]);
 
-E("u1-relation-context", 1, ["7.7","7.3","7.4"], 1, "gen", function(){
+E("u1-relation-context", 1, ["7.7","7.3","7.4"], 2, "gen", function(){
   var T=pick([
     {txt:"Une salle d'école demande des frais de réservation plus un tarif pour chaque invité", tot:"C", v:"g", unit:"invités", per:"invité", sMin:15,sMax:60,rMin:2,rMax:9},
     {txt:"Un trajet en taxi demande des frais de prise en charge plus un tarif pour chaque kilomètre", tot:"C", v:"k", unit:"kilomètres", per:"kilomètre", sMin:3,sMax:12,rMin:2,rMax:5},
@@ -3711,7 +3711,7 @@ E("u6-balance-figure", 6, ["8.1","8.13","8.3"], 1, "gen", function(){
   return q;
 }, ["Une balance reste horizontale quand la même quantité est enlevée des deux plateaux.", "Commence par soustraire les unités libres de la quantité montrée sur chaque plateau."]);
 
-E("u6-model-problem", 6, ["8.12"], 1, "gen", function(){
+E("u6-model-problem", 6, ["8.12"], 2, "gen", function(){
   var a=ri(2,9),b=ri(2,15);var cnt=0;while(a===b&&cnt<20){b=ri(2,15);cnt++;}
   if(a===b)b=a+3;
   var x=ri(3,12),c=a*x+b;
