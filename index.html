@@ -4456,15 +4456,16 @@ E("u7-two-events-prob",7,["12.1","12.5"],2,"gen",function(){
     {t:"\\("+cs+"\\)",fb:"Oui : "+fav+" des "+total+" résultats combinés correspondent, ce qui se simplifie en "+cs+"."},ds,
     "L'espace échantillonnal compte "+total+" résultats également probables et "+fav+" correspondent à la cible. \\(P = "+FR(fav,total)+" = "+cs+"\\). La probabilité est <b>\\("+cs+"\\)</b>.",{mode:"two",fam:fam});
 },["Construis d'abord l'espace échantillonnal combiné, puis compte les résultats correspondants.","Commence par multiplier les nombres de résultats des deux évènements pour obtenir la taille de l'espace échantillonnal."]);
-E("u7-outlier-effect",7,["11.11","11.8"],2,"gen",function(){
-  var mode=Math.random()<0.5;
-  if(!mode){
+E("u7-outlier-effect",7,["11.11","11.8"],1,"gen",function(){
     var base=ri(8,15);var vals=[];for(var i=0;i<5;i++)vals.push(base+ri(-2,3));var out=base+ri(30,50);var all=vals.concat([out]);
     return mcq("Ensemble de données : "+shuffle(all).join(", ")+". La valeur "+out+" est une valeur aberrante. Quel énoncé décrit correctement son effet ?",
       {t:"Elle fait beaucoup monter la moyenne, mais change à peine la médiane",fb:"Oui : la moyenne utilise la taille complète de la valeur aberrante, tandis que la médiane ne bouge que légèrement de position."},
       [{t:"Elle fait beaucoup monter la médiane, mais change à peine la moyenne",fb:"La médiane dépend de la position, pas de la taille, donc une seule grande valeur la bouge à peine. La moyenne absorbe la valeur complète."},{t:"Elle change la moyenne et la médiane du même montant",fb:"La moyenne est tirée vers la valeur aberrante; la médiane ne l'est pas, donc les effets diffèrent."},{t:"Elle n'a aucun effet sur l'une ou l'autre mesure",fb:"La moyenne doit monter parce que le total augmente alors que le nombre de valeurs n'augmente que de un."}],
       "La valeur aberrante ajoute un gros montant au total, ce qui tire fortement la moyenne vers le haut. La médiane, basée sur la position, bouge très peu. La réponse est <b>Elle fait beaucoup monter la moyenne, mais change à peine la médiane</b>.",{mode:"effect"});
-  }
+},["Demande-toi quelle mesure la valeur aberrante peut tirer : la moyenne utilise la taille de chaque valeur.","Commence par vérifier si une valeur est loin du reste des données."]);
+
+
+E("u7-outlier-measure-choice",7,["11.11","11.8"],2,"gen",function(){
   var base2=ri(20,40);
   return mcq("Les salaires dans un petit commerce sont pour la plupart près de "+fmtD(base2*1000)+" $, mais le propriétaire gagne "+fmtD((base2+120)*1000)+" $. Quelle mesure un rapport devrait-il utiliser pour un salaire typique, et pourquoi ?",
     {t:"La médiane, parce que le salaire du propriétaire tire la moyenne vers le haut",fb:"Oui : la médiane résiste au seul salaire extrême et reste typique."},
